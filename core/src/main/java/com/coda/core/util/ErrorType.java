@@ -8,9 +8,14 @@ package com.coda.core.util;
 public enum ErrorType {
 
     //== constants ==
-
-    //== ReadFromDbExceptions ==
     DB_NOT_SUPPORTED,
     INVALID_DB_CREDENTIALS, DB_NOT_FOUND,
-    READ_FROM_DB_EXCEPTIONS;
+    READ_FROM_DB_EXCEPTIONS,
+
+    //== files errors ==
+    FILE_NOT_FOUND,
+    FILE_NOT_READABLE,
+    FILE_NOT_WRITABLE,
+    PERMISSION_DENIED,
+    FILE_ALREADY_EXISTS,
 }

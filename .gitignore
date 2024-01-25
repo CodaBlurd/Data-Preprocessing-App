@@ -36,6 +36,13 @@ buildNumber.properties
 .idea/jarRepositories.xml
 .idea/compiler.xml
 .idea/libraries/
+.iml
+.ipr
+.iws
+out/
+*.bak
+*.env
+.DS_Store
 
 ### Eclipse ###
 *.pydevproject
@@ -71,7 +78,6 @@ local.properties
 *.vbproj
 *.sln
 *.suo
-*.tmp
 *.user
 *.aps
 *.pch
@@ -92,6 +98,71 @@ local.properties
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Compiled source #
+###################
+*.com
+*.dll
+*.exe
+*.o
+*.so
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source because
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.tar
+
+# Logs and databases #
+######################
+*.sql
+*.sqlite
+
+# OS generated files #
+######################
+.DS_Store*
+Icon?
+
+# Maven #
+#########
+!**/target/*.war
+!**/target/*.ear
+!**/target/*.jar
+!**/target/*.zip
+!**/target/*.tar.gz
+!**/target/*.rar
+!**/target/*.exe
+!**/target/*.msi
+!**/target/*.7z
+!**/target/*.gz
+!**/target/*.bz2
+!**/target/*.iso
+!**/target/*.lzh
+!**/target/*.cab
+!**/target/*.nupkg
+!**/target/*.tar.bz2
+!**/target/*.tar
+!**/target/*.tgz
+!**/target/*.txz
+!**/target/*.vsix
+!**/target/*.msm
+!**/target/*.msp
+!**/target/*.deb
+!**/target/*.dmg
+!**/target/*.rpm
+!**/target/*.msu
+!**/target/*.crx
+!**/target/*.xpi
+!**/target/*.wim
+!**/target/*.swm
+!**/target/*.msix
+/mvnw
+/mvnw.cmd
+/.mvn
 
 ### Linux ###
 *~

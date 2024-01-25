@@ -1,4 +1,4 @@
-package com.coda.core.util;
+package com.coda.core.util.db;
 
 /**
  * This interface is used to define the queries

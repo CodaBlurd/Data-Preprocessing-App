@@ -1,4 +1,4 @@
-package com.coda.core.util;
+package com.coda.core.util.db;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

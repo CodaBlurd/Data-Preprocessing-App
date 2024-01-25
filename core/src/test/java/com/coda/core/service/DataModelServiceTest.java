@@ -1,9 +1,11 @@
 package com.coda.core.service;
 
 import com.coda.core.entities.DataModel;
+import com.coda.core.exceptions.ReadFromDbExceptions;
 import com.coda.core.repository.DataModelRepository;
-import com.coda.core.util.DatabaseExtractor;
-import com.coda.core.util.DatabaseExtractorFactory;
+import com.coda.core.util.db.DatabaseExtractor;
+import com.coda.core.util.db.DatabaseExtractorFactory;
+import org.bson.Document;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -11,9 +13,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 /**
@@ -66,6 +71,58 @@ public class DataModelServiceTest {
         verify(databaseExtractorFactory).getExtractor(type);
         verify(databaseExtractor).readData(tableName, url, user, password);
         verify(dataModelRepository).saveAll(expectedDataModels);
+    }
+
+    @Test
+    void extractDataFromTable_Success() throws Exception {
+        // Arrange
+        String type = "mongodb";
+        String databaseName = "testDB";
+        String tableName = "testTable";
+        String url = "mongodb://localhost:27017";
+
+        Map<String, DataModel<Document>> expectedData = new HashMap<>();
+        expectedData.put("1", new DataModel<>());
+
+        when(databaseExtractorFactory.getExtractor(type)).thenReturn(databaseExtractor);
+        when(databaseExtractor.readData(databaseName, tableName, url)).thenReturn(expectedData);
+
+        // Act
+        Map<String, DataModel<Document>> result = dataModelService.extractDataFromTable(type, databaseName, tableName, url);
+
+        // Assert
+        assertEquals(expectedData, result);
+        verify(dataModelRepository).saveAll(expectedData.values());
+    }
+
+    @Test
+    void extractDataFromTable_InvalidArguments() {
+        // Arrange
+        String type = null;
+        String databaseName = "testDB";
+        String tableName = "testTable";
+        String url = "mongodb://localhost:27017";
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () ->
+                dataModelService.extractDataFromTable(type, databaseName, tableName, url));
+    }
+
+
+    @Test
+    void extractDataFromTable_ReadFromDbExceptions() throws Exception {
+        // Arrange
+        String type = "mongodb";
+        String databaseName = "testDB";
+        String tableName = "testTable";
+        String url = "mongodb://localhost:27017";
+
+        when(databaseExtractorFactory.getExtractor(type)).thenReturn(databaseExtractor);
+        when(databaseExtractor.readData(databaseName, tableName, url)).thenThrow(new RuntimeException("Database error"));
+
+        // Act & Assert
+        assertThrows(ReadFromDbExceptions.class, () ->
+                dataModelService.extractDataFromTable(type, databaseName, tableName, url));
     }
 }
 

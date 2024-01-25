@@ -1,7 +1,11 @@
-package com.coda.core.util;
+package com.coda.core.util.db;
 
 import com.coda.core.entities.DataAttributes;
 import com.coda.core.entities.DataModel;
+import com.coda.core.exceptions.ReadFromDbExceptions;
+import com.coda.core.util.ErrorType;
+import lombok.extern.slf4j.Slf4j;
+import org.bson.Document;
 
 import java.sql.*;
 import java.util.*;
@@ -12,7 +16,7 @@ import java.util.*;
  * {@code @Override} annotation to override the readData method
  *
  */
-
+@Slf4j
 public class MySQLExtractor implements DatabaseExtractor {
 
     private final ConnectionFactory connectionFactory = new SqlDbConnectionFactory();
@@ -68,6 +72,11 @@ public class MySQLExtractor implements DatabaseExtractor {
 
 
             return dataModels;
+        } catch (SQLException e) {
+            log.error("Error while reading data from database", e);
+            throw new ReadFromDbExceptions("Error while reading data from database",
+                    ErrorType.READ_FROM_DB_EXCEPTIONS);
+
         }
     }
 
@@ -92,4 +101,11 @@ private boolean isTableNameValid(String tableName) {
     return true;
 }
 
+// == Not used for this class, but required to implement the interface ==
+
+    @Override
+    public Map<String, DataModel<Document>> readData(String databaseName,
+   String tableName, String url) {
+        return new HashMap<>();
+    }
 }

@@ -1,4 +1,4 @@
-package com.coda.core.util;
+package com.coda.core.util.db;
 
 /**
  * DatabaseNames is a class that contains all the database and driver manager names that can be used in the application.
