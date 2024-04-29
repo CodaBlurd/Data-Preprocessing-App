@@ -107,7 +107,7 @@ public class DataModelService {
                             dataAttributes.transformValue();
                             dataAttributes.applyDefaultValue();
                             if (!dataAttributes.applyValidationRules()) {
-                                log.error("Validation failed for attribute: {}", dataAttributes.getAttributeName()); // More detailed logging
+                                log.error("Validation failed for attribute with name: {}", dataAttributes.getAttributeName()); // More detailed logging
                                 throw new DataExtractionException("Validation failed for attribute: " + dataAttributes.getAttributeName(),
                                         ErrorType.VALIDATION_FAILED);
                             }
