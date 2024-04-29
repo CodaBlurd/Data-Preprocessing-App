@@ -11,7 +11,7 @@ import java.sql.DriverManager;
 public class SqlDbConnectionFactory implements ConnectionFactory{
 
 
-        // load the driver class using static block
+        // == load the driver class using static block ==
         // static block is executed first when the class is loaded
         static {
             try {
@@ -31,7 +31,7 @@ public class SqlDbConnectionFactory implements ConnectionFactory{
          */
         @Override
         public Connection connect(String url, String user, String password) throws Exception {
-            return DriverManager.getConnection(url, user, password);
+            return DriverManager.getConnection(url, user, password); //
 
         }
     }

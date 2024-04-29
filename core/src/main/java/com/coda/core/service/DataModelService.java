@@ -1,5 +1,6 @@
 package com.coda.core.service;
 
+import com.coda.core.entities.DataAttributes;
 import com.coda.core.entities.DataModel;
 import com.coda.core.exceptions.DataExtractionException;
 import com.coda.core.exceptions.ReadFromDbExceptions;
@@ -7,10 +8,7 @@ import com.coda.core.repository.DataModelRepository;
 import com.coda.core.util.*;
 import com.coda.core.util.db.DatabaseExtractor;
 import com.coda.core.util.db.DatabaseExtractorFactory;
-import com.coda.core.util.file.DataParser;
-import com.coda.core.util.file.DataParserImpl;
 import com.coda.core.util.file.FileExtractor;
-import com.coda.core.util.file.FileExtractorImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -72,6 +71,7 @@ public class DataModelService {
             // check the database type
             DatabaseExtractor databaseExtractor =   databaseExtractorFactory.getExtractor(type);
             List<DataModel<Object>> dataModels = databaseExtractor.readData(tableName, url, user, password);
+            extract(dataModels);
             dataModelRepository.saveAll(dataModels);
             return dataModels;
         } catch (Exception e) {
@@ -97,19 +97,34 @@ public class DataModelService {
             throw new IllegalArgumentException("Invalid arguments");
         }
 
-        // extract data from the database
-        try{
-            // check the database type
-            DatabaseExtractor databaseExtractor =   databaseExtractorFactory.getExtractor(type);
+        try {
+            DatabaseExtractor databaseExtractor = databaseExtractorFactory.getExtractor(type);
             Map<String, DataModel<Document>> dataModels = databaseExtractor.readData(databaseName, tableName, url);
-            dataModelRepository.saveAll(dataModels.values());
+            if (dataModels != null) {
+                for (DataModel<Document> dataModel : dataModels.values()) {
+                    if (dataModel.getAttributesMap() != null) {
+                        for (DataAttributes<Document> dataAttributes : dataModel.getAttributesMap().values()) {
+                            dataAttributes.transformValue();
+                            dataAttributes.applyDefaultValue();
+                            if (!dataAttributes.applyValidationRules()) {
+                                log.error("Validation failed for attribute: {}", dataAttributes.getAttributeName()); // More detailed logging
+                                throw new DataExtractionException("Validation failed for attribute: " + dataAttributes.getAttributeName(),
+                                        ErrorType.VALIDATION_FAILED);
+                            }
+                            dataAttributes.setLastUpdatedDate(Instant.now());
+                        }
+                    }
+                }
+                dataModelRepository.saveAll(dataModels.values());
+            }
             return dataModels;
         } catch (Exception e) {
-            log.error("Error while reading data from database", e);
-            throw new ReadFromDbExceptions("Error reading from database",
-                    ErrorType.READ_FROM_DB_EXCEPTIONS);
+            log.error("Error while reading data from database: Type [{}], DatabaseName [{}], TableName [{}], URL [{}], Error: {}",
+                    type, databaseName, tableName, url, e.getMessage());
+            throw new ReadFromDbExceptions("Error reading from database", ErrorType.READ_FROM_DB_EXCEPTIONS);
         }
     }
+
 
     /**
      * Reads data from a file.
@@ -132,6 +147,7 @@ public class DataModelService {
         try {
 
             List<DataModel<Object>> dataModels = fileExtractor.readData(filePath);
+            extract(dataModels);
             dataModelRepository.saveAll(dataModels);
             return dataModels;
         } catch (IOException e) {
@@ -141,22 +157,26 @@ public class DataModelService {
         }
     }
 
+    //== private methods ==
 
-
-
-
-
-
-
-
-
-
-    //== DATA TRANSFORMATION PHASE ==
-
-
-
-
-    //== DATA LOADING PHASE ==
+    private void extract(List<DataModel<Object>> dataModels) throws DataExtractionException {
+        if (dataModels != null && !dataModels.isEmpty()) {
+            for (DataModel<Object> dataModel : dataModels) {
+                if (dataModel.getAttributesMap() != null) {
+                    for (DataAttributes<Object> dataAttributes : dataModel.getAttributesMap().values()) {
+                        dataAttributes.transformValue();
+                        dataAttributes.applyDefaultValue();
+                        if (!dataAttributes.applyValidationRules()) {
+                            log.error("Validation failed for attribute: {}", dataAttributes.getAttributeName());
+                            throw new DataExtractionException("Validation failed for attribute: " + dataAttributes.getAttributeName(),
+                                    ErrorType.VALIDATION_FAILED);
+                        }
+                        dataAttributes.setLastUpdatedDate(Instant.now());
+                    }
+                }
+            }
+        }
+    }
 
 
 }

@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -26,7 +27,7 @@ public class DataModel<T> {
     @Id
     private String id;
 
-    private Map<String, DataAttributes<T>> attributesMap;
+    private Map<String, DataAttributes<T>> attributesMap = new HashMap<>();
 
     public DataModel(String id, Map<String, DataAttributes<T>> attributes) {
         this.id = id;

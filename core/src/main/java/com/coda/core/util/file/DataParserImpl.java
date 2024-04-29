@@ -23,7 +23,8 @@ public class DataParserImpl implements DataParser{
         String id = data[0];
         Map<String, DataAttributes<Object>> attributes = new HashMap<>();
         for (int i = 1; i < data.length; i++) {
-            DataAttributes<Object> attribute = new DataAttributes<>(String.valueOf(i), data[i], "Object");
+            DataAttributes<Object> attribute = new DataAttributes<>(String.valueOf(i), data[i], "Object",
+                    Object.class);
             attributes.put(String.valueOf(i), attribute);
         }
         DataModel<Object> dataModel = new DataModel<>();

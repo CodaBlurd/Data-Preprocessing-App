@@ -16,7 +16,7 @@ public class DatabaseExtractorFactory {
 
     /**
      * This method returns the appropriate DatabaseExtractor based on the database type provided.
-     * @param databaseType
+     * @param databaseType The type of the database
      * @return DatabaseExtractor
      */
 
@@ -26,7 +26,7 @@ public class DatabaseExtractorFactory {
                 return new MySQLExtractor();
             case DatabaseNames.MONGODB:
                 return new MongoDBExtractor();
-                // other database types will be added here
+            // other database types will be added here
             default:
                 throw new IllegalArgumentException("Unsupported database type: " + databaseType);
         }

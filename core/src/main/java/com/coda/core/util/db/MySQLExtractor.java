@@ -58,14 +58,15 @@ public class MySQLExtractor implements DatabaseExtractor {
             while (resultSet.next()) {
                 Map<String, DataAttributes<Object>> attributes = new HashMap<>();
                 for (int i = 1; i <= columnCount; i++) {
-                    DataAttributes<Object> attribute = new DataAttributes(
+                    DataAttributes<Object> attribute = new DataAttributes<>(
                             metaData.getColumnName(i),
                             resultSet.getObject(i),
-                            metaData.getColumnTypeName(i)
+                            metaData.getColumnTypeName(i),
+                            Object.class
                     );
                     attributes.put(metaData.getColumnName(i), attribute);
                 }
-                DataModel<Object> dataModel = new DataModel(resultSet.getString("id"), attributes); // Assuming 'id' is a column
+                DataModel<Object> dataModel = new DataModel<>(resultSet.getString("id"), attributes); // Assuming 'id' is a column
                 dataModels.add(dataModel);
             }
 
@@ -93,7 +94,7 @@ private boolean isTableNameValid(String tableName) {
     }
 
     // Check if tableName contains only alphanumeric characters and underscores
-    String regex = "^[a-zA-Z0-9_]+$";
+    String regex = "^[a-zA-Z0-9_]+$"; //
     if (!tableName.matches(regex)) {
         return false;
     }

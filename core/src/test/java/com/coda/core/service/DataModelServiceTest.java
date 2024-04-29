@@ -17,8 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -61,6 +60,7 @@ public class DataModelServiceTest {
         when(databaseExtractorFactory.getExtractor(type)).thenReturn(databaseExtractor);
 
         List<DataModel<Object>> expectedDataModels = new ArrayList<>();
+
         when(databaseExtractor.readData(tableName, url, user, password)).thenReturn(expectedDataModels);
 
         // Act
@@ -74,25 +74,23 @@ public class DataModelServiceTest {
     }
 
     @Test
-    void extractDataFromTable_Success() throws Exception {
-        // Arrange
+    void testExtractDataFromTableNoSQL() throws Exception {
         String type = "mongodb";
-        String databaseName = "testDB";
-        String tableName = "testTable";
+        String databaseName = "sampleDB";
+        String tableName = "sampleTable";
         String url = "mongodb://localhost:27017";
 
-        Map<String, DataModel<Document>> expectedData = new HashMap<>();
-        expectedData.put("1", new DataModel<>());
+        Map<String, DataModel<Document>> expectedDataModels = new HashMap<>();
+        DataModel<Document> model = new DataModel<>();
+        expectedDataModels.put("1", model);
+        when(databaseExtractorFactory.getExtractor(anyString())).thenReturn(databaseExtractor);
+        when(databaseExtractor.readData(databaseName, tableName, url)).thenReturn(expectedDataModels);
 
-        when(databaseExtractorFactory.getExtractor(type)).thenReturn(databaseExtractor);
-        when(databaseExtractor.readData(databaseName, tableName, url)).thenReturn(expectedData);
-
-        // Act
         Map<String, DataModel<Document>> result = dataModelService.extractDataFromTable(type, databaseName, tableName, url);
 
-        // Assert
-        assertEquals(expectedData, result);
-        verify(dataModelRepository).saveAll(expectedData.values());
+        assertNotNull(result);
+        assertEquals(expectedDataModels, result);
+        verify(dataModelRepository).saveAll(anyCollection());
     }
 
     @Test

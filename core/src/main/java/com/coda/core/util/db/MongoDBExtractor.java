@@ -37,7 +37,8 @@ public class MongoDBExtractor implements DatabaseExtractor {
             DataModel<Document> dataModel = new DataModel<>();
             Map<String, DataAttributes<Document>> attributes = new HashMap<>();
             for (String key : document.keySet()) {
-                DataAttributes<Document> attribute = new DataAttributes<>(key, document.get(key), "Document");
+                DataAttributes<Document> attribute = new DataAttributes<>(key, document.get(key), "Document",
+                        Document.class);
                 attributes.put(key, attribute);
             }
             dataModel.setAttributesMap(attributes);

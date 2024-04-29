@@ -11,17 +11,19 @@
 	<packaging>pom</packaging>
 	<modules>
 		<module>core</module>
-	</modules>
+        <module>web</module>
+    </modules>
 
 
 	<groupId>com.coda</groupId>
 	<artifactId>dataset-etl</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>${revision}</version>
 	<name>dataset-etl</name>
 	<description>dataset preparation project</description>
 
 
 	<properties>
+		<revision>1.0.0-SNAPSHOT</revision>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.version>19</java.version>
 		<lombok.version>1.18.30</lombok.version>
@@ -42,6 +44,7 @@
 		<spring-batch.version>5.0.4</spring-batch.version>
 		<mysql.version>8.0.33</mysql.version>
 		<mongodb-driver.version>4.11.1</mongodb-driver.version>
+
 	</properties>
 	<dependencyManagement>
 		<dependencies>
