@@ -44,6 +44,7 @@
 		<spring-batch.version>5.0.4</spring-batch.version>
 		<mysql.version>8.0.33</mysql.version>
 		<mongodb-driver.version>4.11.1</mongodb-driver.version>
+		<apache-commons-csv.version>1.10.0</apache-commons-csv.version>
 
 	</properties>
 	<dependencyManagement>
@@ -67,6 +68,12 @@
 				<groupId>org.mongodb</groupId>
 				<artifactId>mongodb-driver-sync</artifactId>
 				<version>${mongodb-driver.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-csv</artifactId>
+				<version>${apache-commons-csv.version}</version>
 			</dependency>
 
 			<dependency>

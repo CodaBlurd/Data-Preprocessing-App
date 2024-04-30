@@ -129,37 +129,41 @@ public class DataModelService {
     /**
      * Reads data from a file.
      * @param filePath The path of the file to read from
-     * @See FileExtractor
+     * @See FileExtractor for more details
      * @return A list of DataModel objects
      * @throws ReadFromDbExceptions if the file path is invalid
      */
     public List<DataModel<Object>> extractDataFromFile(String filePath) throws DataExtractionException {
+        List<DataModel<Object>> result;
         if (filePath == null || filePath.isEmpty()) {
             throw new IllegalArgumentException("Invalid file path");
         }
 
-        File file = new File(filePath);
-        if (!file.exists() || !file.canRead()) {
+        // Use FileExtractor to check if the file exists and can be read
+        if (!fileExtractor.exists(filePath) || !fileExtractor.canRead(filePath)) {
             throw new DataExtractionException("File does not exist or cannot be read",
                     ErrorType.FILE_NOT_READABLE);
         }
 
         try {
-
-            List<DataModel<Object>> dataModels = fileExtractor.readData(filePath);
+            List<DataModel<Object>> dataModels = fileExtractor.readDataWithApacheCSV(filePath);
             extract(dataModels);
             dataModelRepository.saveAll(dataModels);
-            return dataModels;
+            result = dataModels;
         } catch (IOException e) {
             log.error("Error while reading data from file", e);
-            throw new DataExtractionException("e.getMessage()",
+            e.printStackTrace();
+            throw new DataExtractionException(e.getMessage(),
                     ErrorType.FILE_NOT_READABLE);
         }
+
+        return result;
     }
+
 
     //== private methods ==
 
-    private void extract(List<DataModel<Object>> dataModels) throws DataExtractionException {
+    void extract(List<DataModel<Object>> dataModels) throws DataExtractionException {
         if (dataModels != null && !dataModels.isEmpty()) {
             for (DataModel<Object> dataModel : dataModels) {
                 if (dataModel.getAttributesMap() != null) {

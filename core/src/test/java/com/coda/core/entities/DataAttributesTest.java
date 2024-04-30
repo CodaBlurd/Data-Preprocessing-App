@@ -3,6 +3,8 @@ package com.coda.core.entities;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DataAttributesTest {
@@ -31,19 +33,27 @@ class DataAttributesTest {
 
     @Test
     void testTransformValue() {
-        assertEquals("Value", stringAttributes.transformValue(), "Transformed values should match for strings");
-        assertEquals(25, integerAttributes.transformValue(), "Transformed values should match for integers");
+        // Assuming the transformation does not alter the input for strings
+        Optional<String> stringOptional = stringAttributes.transformValue();
+        assertTrue(stringOptional.isPresent(), "String value should be transformed");
+        assertEquals("Value", stringOptional.get(), "Transformed string value should match input");
+
+        // Assuming no actual transformation logic alters the integer
+        Optional<Integer> integerOptional = integerAttributes.transformValue();
+        assertTrue(integerOptional.isPresent(), "Integer value should be transformed");
+        assertEquals(25, integerOptional.get(), "Transformed integer value should match input");
     }
+
 
     @Test
     void testDefaultValue() {
         stringAttributes.setDefaultValue("default");
-        stringAttributes.setValue(null);
+        stringAttributes.setValue(Optional.empty());
         stringAttributes.applyDefaultValue();
         assertEquals("default", stringAttributes.getValue(), "Value should be set to default when null");
 
         integerAttributes.setDefaultValue(0);
-        integerAttributes.setValue(null);
+        integerAttributes.setValue(Optional.empty());
         integerAttributes.applyDefaultValue();
         assertEquals(0, integerAttributes.getValue(), "Integer value should be set to default when null");
     }
@@ -51,11 +61,11 @@ class DataAttributesTest {
     @Test
     void testApplyValidationRules() {
         assertTrue(stringAttributes.applyValidationRules(), "Validation should pass for non-empty string");
-        stringAttributes.setValue("");
+        stringAttributes.setValue(Optional.of(""));
         assertFalse(stringAttributes.applyValidationRules(), "Validation should fail for empty string");
 
         assertTrue(integerAttributes.applyValidationRules(), "Validation should pass for non-negative integer");
-        integerAttributes.setValue(-1);
+        integerAttributes.setValue(Optional.of(-1));
         assertFalse(integerAttributes.applyValidationRules(), "Validation should fail for negative integer");
     }
 }

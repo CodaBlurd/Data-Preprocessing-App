@@ -12,5 +12,7 @@ public interface FileExtractor {
          * @param filePath the path of the file
          * @return List<DataModel<Object>>
         */
-        List<DataModel<Object>> readData(String filePath) throws IOException;
+        List<DataModel<Object>> readDataWithApacheCSV(String filePath) throws IOException;
+        boolean exists(String filePath);
+        boolean canRead(String filePath);
 }

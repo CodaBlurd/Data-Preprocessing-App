@@ -1,20 +1,17 @@
 package com.coda.core.entities;
 
+import com.coda.core.util.transform.*;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Predicate;
 
 /**
  * DTO for {@link DataModel}
  * @param <T> The type of the value
- * This class is used to store the data attributes of a column in a table
+ * This class is used to store the data attributes of a column in a table.
  *
  */
 @NoArgsConstructor
@@ -22,8 +19,10 @@ import java.util.Set;
 @Getter @Setter
 @Slf4j
 public class DataAttributes<T> {
+    private List<Predicate<T>> validationRulesList = new ArrayList<>();
 
-    private T value;
+    private Optional<T> value = Optional.empty();
+
     private String type;
     private String attributeName;
     private String format;
@@ -36,98 +35,96 @@ public class DataAttributes<T> {
     private Instant lastUpdatedDate;
     private Class<T> typeClazz;  // Class token for type safety
 
+    // Constructor initializes value and parses and initializes validation rules.
     public DataAttributes(String columnName, Object object, String columnTypeName, Class<T> typeClazz) {
         this.attributeName = columnName;
-        this.value = typeClazz.cast(object); // Safe cast
+        this.value = Optional.ofNullable(typeClazz.cast(object)); // Safe cast
         this.type = columnTypeName;
         this.typeClazz = typeClazz;
-        parseValidationRules(); // Parse validation rules in constructor
+        parseValidationRules();
+        initializeValidationRules();
     }
 
+    // Parse validation rules from a single string to a set of rules.
     private void parseValidationRules() {
         if (validationRules != null && !validationRules.isEmpty()) {
-            String[] rules = validationRules.split(",");
-            for (String rule : rules) {
-                parsedRules.add(rule.trim());
-            }
+            Arrays.stream(validationRules.split(",")).map(String::trim).forEach(parsedRules::add);
         }
     }
 
+    // Static map of transformation strategies to be initialized once for all instances.
+    private static final Map<String, TransformValue> TRANSFORM_VALUE_MAP = Map.of(
+            "Integer", new IntegerTransform(),
+            "Double", new DoubleTransform(),
+            "String", new StringTransform(),
+            "LocalDateTime", new LocalDateTimeTransform(),
+            "Instant", new InstantTransform(),
+            "Boolean", new BooleanTransform(),
+            "Long", new LongTransform(),
+            "Float", new FloatTransform(),
+            "Object", new ObjectTransform()
+    );
+
     /**
-     * This method is used to transform the value of the attribute
+     * Transforms the value based on its type.
      * @return T the transformed value of type T of the attribute
      */
+    public Optional<T> transformValue() {
+        // Check if the value is present to proceed with transformation
+        if (value.isEmpty()) {
+            return Optional.empty();
+        }
 
-    public T transformValue() {
+        // Retrieve the appropriate transformation strategy from the map based on the 'type'
+        TransformValue transformValue = TRANSFORM_VALUE_MAP.get(type);
+        if (transformValue == null) {
+            log.error("No transformation strategy found for type: {}", type);
+            return Optional.empty();
+        }
+
         try {
-            Object result = null;
-            switch (type) {
-                case "String":
-                    result = String.valueOf(value);
-                    break;
-                case "Integer":
-                    result = Integer.valueOf(String.valueOf(value));
-                    break;
-                case "Double":
-                    result = Double.valueOf(String.valueOf(value));
-                    break;
-                case "Boolean":
-                    result = Boolean.valueOf(String.valueOf(value));
-                    break;
-                case "Long":
-                    result = Long.valueOf(String.valueOf(value));
-                    break;
-                case "Float":
-                    result = Float.valueOf(String.valueOf(value));
-                    break;
-                case "Date":
-                    if (format != null && !format.isEmpty()) {
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
-                        result = LocalDateTime.parse(String.valueOf(value), formatter);
-                    } else {
-                        result = Instant.parse(String.valueOf(value));
-                    }
-                    break;
-                default:
-                    result = value;
-            }
-            return typeClazz.cast(result);  // Type-safe cast
-        } catch (ClassCastException | DateTimeParseException | NumberFormatException e) {
-            log.error("Error transforming value for {}: {}", attributeName, e.getMessage());
-            return value;  // Optionally, could also return null or throw a custom exception
+            // Attempt to transform the value using the retrieved strategy
+            return transformValue.transformValue(value.get().toString(), typeClazz, format);
+        } catch (Exception e) {
+            // Log the exception details and return an empty Optional if the transformation fails
+            log.error("Transformation failed for attribute '{}', type '{}': {}", attributeName, type, e.getMessage());
+            return Optional.empty();
         }
     }
 
-    //== Apply default value if value is null ==
+
+    // Applies the default value if the current value is empty.
     public void applyDefaultValue() {
-        if (value == null) {
-            value = defaultValue;
+        value = value.or(() -> Optional.ofNullable(defaultValue));
+    }
+
+    // Initialize validation rules based on parsed rules.
+    public void initializeValidationRules() {
+        if (required) {
+            validationRulesList.add(Objects::nonNull);
+        }
+        if (parsedRules.contains("non-negative") && Number.class.isAssignableFrom(typeClazz)) {
+            validationRulesList.add(val -> ((Number) val).doubleValue() >= 0);
+        }
+        if (parsedRules.contains("non-empty") && String.class.equals(typeClazz)) {
+            validationRulesList.add(val -> !((String) val).isEmpty());
         }
     }
 
-    //== Apply validation rules ==
-    /**
-     * This method is used to apply the validation rules to the attribute
-     * @return boolean true if the validation rules are applied successfully, false otherwise
-     */
+    // Applies all validation rules to the current value.
     public boolean applyValidationRules() {
-        // Implement validation rules here
-        if (required && value == null) {
-            return false;
-        }
-        if (parsedRules.contains("non-negative") && value instanceof Number && ((Number) value).doubleValue() < 0) {
-            return false;
-        }
-        if (parsedRules.contains("non-empty") && value instanceof String && ((String) value).isEmpty()) {
-            return false;
-        }
-        return true;
+        return value.map(v -> validationRulesList.stream().allMatch(rule -> rule.test(v))).orElse(false);
     }
 
+    // Sets new validation rules and re-initializes the parsed rules.
     public void setValidationRules(String validationRules) {
         this.validationRules = validationRules;
+        parsedRules.clear();
         parseValidationRules();
+        initializeValidationRules();
     }
 
-
+    public T getValue() {
+        return value.orElse(null);
+    }
 }

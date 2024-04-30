@@ -3,54 +3,68 @@ package com.coda.core.util.file;
 import com.coda.core.entities.DataAttributes;
 import com.coda.core.entities.DataModel;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * This class is used to extract data from a file
- * <p> This class is used to extract data from a file </p>
- * Implements FileExtractor interface
- * @see FileExtractor
- * @see DataParser
- */
 @Slf4j
 @Service
-public class FileExtractorImpl implements FileExtractor{
-    private final DataParser dataParser;
+public class FileExtractorImpl implements FileExtractor {
 
-    public FileExtractorImpl(DataParser dataParser) {
-        this.dataParser = dataParser;
+    public FileExtractorImpl() {
+        // Constructor remains empty if no initialization is required.
     }
 
-    /**
-     * This method is used to read data from a file
-     * @param filePath the path of the file
-     * @return List<DataModel<Object>>
-     */
-    public List<DataModel<Object>> readData(String filePath) {
-        //== local variables ==
+    @Override
+    public List<DataModel<Object>> readDataWithApacheCSV(String filePath) throws IOException {
         List<DataModel<Object>> dataModels = new ArrayList<>();
-        //== read data from the file ==
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                try {
-                    DataModel<Object> dataModel = dataParser.parseLine(line);
-                    dataModels.add(dataModel);
-                } catch (IllegalArgumentException e) {
-                    log.error("Failed to parse line: " + line, e);
-                }
+        try (Reader reader = Files.newBufferedReader(Paths.get(filePath));
+             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT)) {
+            for (CSVRecord record : csvParser) {
+                DataModel<Object> dataModel = getObjectDataModel(record);
+                dataModels.add(dataModel);
             }
         } catch (IOException e) {
-            log.error("Failed to read file: " + filePath, e);
+            log.error("Failed to read file: {}", filePath, e);
+            throw e; // Rethrow the exception to allow callers to handle it
         }
         return dataModels;
     }
+
+    @Override
+    public boolean exists(String filePath) {
+        if (filePath == null || filePath.trim().isEmpty()) return false;
+        File file = new File(filePath);
+        return file.exists() && file.isFile();
+    }
+
+    @Override
+    public boolean canRead(String filePath) {
+        if (filePath == null || filePath.trim().isEmpty()) return false;
+        File file = new File(filePath);
+        return file.canRead() && file.isFile();
+    }
+
+
+    // Private helper method remains the same
+    private static DataModel<Object> getObjectDataModel(CSVRecord record) {
+        Map<String, DataAttributes<Object>> attributes = new HashMap<>();
+        record.toMap().forEach((key, value) -> {
+            DataAttributes<Object> attribute = new DataAttributes<>(key, value, "Object", Object.class);
+            attributes.put(key, attribute);
+        });
+        DataModel<Object> dataModel = new DataModel<>();
+        dataModel.setAttributesMap(attributes);
+        return dataModel;
+    }
 }
+

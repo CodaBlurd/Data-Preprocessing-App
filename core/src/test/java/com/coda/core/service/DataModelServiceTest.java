@@ -1,21 +1,24 @@
 package com.coda.core.service;
 
 import com.coda.core.entities.DataModel;
+import com.coda.core.exceptions.DataExtractionException;
 import com.coda.core.exceptions.ReadFromDbExceptions;
 import com.coda.core.repository.DataModelRepository;
 import com.coda.core.util.db.DatabaseExtractor;
 import com.coda.core.util.db.DatabaseExtractorFactory;
+import com.coda.core.util.file.FileExtractor;
+import com.coda.core.util.file.FileExtractorImpl;
 import org.bson.Document;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -40,12 +43,20 @@ public class DataModelServiceTest {
     @Mock
     private DatabaseExtractor databaseExtractor;
 
+    @Mock
+    FileExtractor fileExtractor;
+
     @InjectMocks
     private DataModelService dataModelService;
 
+
+
+    @BeforeEach
+    void setUp() {
+    }
     /**
      * This method is used to test the extractDataFromTable method
-     * @throws Exception
+     * @throws Exception if an error occurs
      */
 
     @Test
@@ -122,5 +133,38 @@ public class DataModelServiceTest {
         assertThrows(ReadFromDbExceptions.class, () ->
                 dataModelService.extractDataFromTable(type, databaseName, tableName, url));
     }
+
+    @Test
+    public void testExtractDataFromFile_Valid() throws Exception {
+        String filePath = "valid.csv";
+        List<DataModel<Object>> dataModels = new ArrayList<>();
+
+        // Ensure that the file system checks are mocked to simulate a valid file
+        when(fileExtractor.exists(filePath)).thenReturn(true);
+        when(fileExtractor.canRead(filePath)).thenReturn(true);
+        when(fileExtractor.readDataWithApacheCSV(filePath)).thenReturn(dataModels);
+
+        List<DataModel<Object>> result = dataModelService.extractDataFromFile(filePath);
+
+        assertNotNull(result);
+        assertEquals(dataModels, result);
+        verify(fileExtractor).exists(filePath);
+        verify(fileExtractor).canRead(filePath);
+        verify(fileExtractor).readDataWithApacheCSV(filePath);
+        verify(dataModelRepository).saveAll(dataModels);
+    }
+
+    @Test
+    public void testExtractDataFromFile_FileNotFound() {
+        String filePath = "invalid.csv";
+        when(fileExtractor.exists(filePath)).thenReturn(false);
+
+        assertThrows(DataExtractionException.class, () -> dataModelService.extractDataFromFile(filePath));
+    }
+
+
+
+
+
 }
 
