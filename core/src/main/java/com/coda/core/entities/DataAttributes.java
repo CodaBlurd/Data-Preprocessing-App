@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * DTO for {@link DataModel}
@@ -31,7 +32,7 @@ public class DataAttributes<T> {
     private String description;
     private String validationRules;
     private Set<String> parsedRules = new HashSet<>();
-    private Map<String, T> metadata;
+    private Map<String, T> metadata; // Metadata for the attribute
     private Instant lastUpdatedDate;
     private Class<T> typeClazz;  // Class token for type safety
 
@@ -91,6 +92,51 @@ public class DataAttributes<T> {
             return Optional.empty();
         }
     }
+
+    //== remove/substitute bad characters from categorical variables ==
+    public void cleanCategoricalValues() {
+        if (type.equals("String")) {
+            value = value.map(val -> (T) val.toString().replaceAll("[^a-zA-Z0-9]", ""));
+        }
+    }
+
+    //== replace missing categorical values with the mode of the column ==
+    public void replaceMissingCategoricalValues(List<DataAttributes<T>> column) {
+        if (type.equals("String")) {
+            // Calculate the mode of the column
+            Map<T, Long> valueCountMap = column.stream()
+                    .collect(Collectors.groupingBy(DataAttributes::getValue, Collectors.counting()));
+            T mode = valueCountMap.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse(null);
+            // Replace missing values with the mode
+            value = value.or(() -> Optional.ofNullable(mode));
+        }
+    }
+
+    //== replace missing numerical values with the mean of the column ==
+    public void replaceMissingNumericalValues(List<DataAttributes<T>> column) {
+        if (Number.class.isAssignableFrom(typeClazz)) {
+            OptionalDouble average = column.stream()
+                    .filter(attr -> attr.getValue() != null)
+                    .mapToDouble(attr -> ((Number) attr.getValue()).doubleValue())
+                    .average();
+
+            if (average.isPresent()) {
+                T meanValue = typeClazz.cast(average.getAsDouble()); // Safe cast, already checked type
+                value = value.or(() -> Optional.of(meanValue));
+            } else {
+                log.warn("Mean calculation failed due to empty or invalid data for column: {}", attributeName);
+            }
+        } else {
+            log.error("Attempted to calculate numerical mean for non-numerical type: {}", typeClazz);
+        }
+    }
+
+
+
+
 
 
     // Applies the default value if the current value is empty.

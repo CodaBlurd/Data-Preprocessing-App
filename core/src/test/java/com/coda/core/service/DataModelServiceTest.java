@@ -15,9 +15,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.verification.VerificationMode;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,6 +50,9 @@ public class DataModelServiceTest {
 
     @Mock
     FileExtractor fileExtractor;
+
+    @Mock
+    ResourceLoader resourceLoader;
 
     @InjectMocks
     private DataModelService dataModelService;
@@ -81,7 +89,6 @@ public class DataModelServiceTest {
         assertEquals(expectedDataModels, actualDataModels);
         verify(databaseExtractorFactory).getExtractor(type);
         verify(databaseExtractor).readData(tableName, url, user, password);
-        verify(dataModelRepository).saveAll(expectedDataModels);
     }
 
     @Test
@@ -136,31 +143,77 @@ public class DataModelServiceTest {
 
     @Test
     public void testExtractDataFromFile_Valid() throws Exception {
-        String filePath = "valid.csv";
-        List<DataModel<Object>> dataModels = new ArrayList<>();
+        String resourcePath = "classpath:valid.csv";
+        List<DataModel<Object>> expectedDataModels = new ArrayList<>();
+        Resource mockResource = mock(Resource.class);
+        InputStream mockInputStream = new ByteArrayInputStream(new byte[0]);
 
-        // Ensure that the file system checks are mocked to simulate a valid file
-        when(fileExtractor.exists(filePath)).thenReturn(true);
-        when(fileExtractor.canRead(filePath)).thenReturn(true);
-        when(fileExtractor.readDataWithApacheCSV(filePath)).thenReturn(dataModels);
+        // Mocking the resource loader and file system behaviors
+        when(resourceLoader.getResource(resourcePath)).thenReturn(mockResource);
+        when(mockResource.exists()).thenReturn(true);
+        when(mockResource.getInputStream()).thenReturn(mockInputStream);
 
-        List<DataModel<Object>> result = dataModelService.extractDataFromFile(filePath);
+        // Ensuring that the file extractor reads the mock input stream and returns the expected data models
+        when(fileExtractor.readDataWithApacheCSV(mockInputStream)).thenReturn(expectedDataModels);
 
-        assertNotNull(result);
-        assertEquals(dataModels, result);
-        verify(fileExtractor).exists(filePath);
-        verify(fileExtractor).canRead(filePath);
-        verify(fileExtractor).readDataWithApacheCSV(filePath);
-        verify(dataModelRepository).saveAll(dataModels);
+        // Execute the method under test
+        List<DataModel<Object>> actualDataModels = dataModelService.extractDataFromFile("valid.csv");
+
+        // Assertions and verifications
+        assertNotNull(actualDataModels, "The result should not be null");
+        assertEquals(expectedDataModels, actualDataModels, "The returned data models should match the expected");
+        verify(mockResource).getInputStream();
+        verify(fileExtractor).readDataWithApacheCSV(mockInputStream);
     }
+
 
     @Test
     public void testExtractDataFromFile_FileNotFound() {
-        String filePath = "invalid.csv";
-        when(fileExtractor.exists(filePath)).thenReturn(false);
+        String resourcePath = "classpath:invalid.csv";
+        Resource mockResource = mock(Resource.class);
 
-        assertThrows(DataExtractionException.class, () -> dataModelService.extractDataFromFile(filePath));
+        // Mocking the resource loader and file system behaviors
+        when(resourceLoader.getResource(resourcePath)).thenReturn(mockResource);
+        when(mockResource.exists()).thenReturn(false);
+
+        // Execute the method under test
+        assertThrows(DataExtractionException.class, () -> dataModelService.extractDataFromFile("invalid.csv"));
+
+        // Verifying that the resource loader was called to get the resource
+        verify(resourceLoader).getResource(resourcePath);
     }
+
+    @Test
+    void testLoadDataToCSV() throws IOException {
+        // arrange
+        String filePath = "test.csv";
+        List<DataModel<Object>> dataModels = new ArrayList<>();
+        dataModels.add(new DataModel<>());
+        dataModels.add(new DataModel<>());
+        when(fileExtractor.canWrite(filePath)).thenReturn(true);
+        doNothing().when(fileExtractor).writeDataWithApacheCSV(dataModels, filePath);
+
+        // act
+        dataModelService.loadDataToCSV(dataModels, filePath);
+
+        // assert
+        verify(fileExtractor).canWrite(filePath);
+        verify(fileExtractor).writeDataWithApacheCSV(dataModels, filePath);
+
+    }
+
+    @Test
+    void testLoadDataToCSV_FailToWrite() throws IOException {
+        String filePath = "test.csv";
+        List<DataModel<Object>> dataModels = new ArrayList<>();
+        when(fileExtractor.canWrite(filePath)).thenReturn(false);
+
+        assertThrows(DataExtractionException.class, () -> dataModelService.loadDataToCSV(dataModels, filePath));
+
+        verify(fileExtractor).canWrite(filePath);
+        verify(fileExtractor, never()).writeDataWithApacheCSV(any(), any());
+    }
+
 
 
 

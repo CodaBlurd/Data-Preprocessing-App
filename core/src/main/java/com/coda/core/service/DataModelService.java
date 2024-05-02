@@ -12,12 +12,15 @@ import com.coda.core.util.file.FileExtractor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,13 +38,16 @@ public class DataModelService {
     private final DataModelRepository dataModelRepository;
     private final DatabaseExtractorFactory databaseExtractorFactory;
     private final FileExtractor fileExtractor;
+
+    private final ResourceLoader resourceLoader;
     @Autowired
     public DataModelService(DataModelRepository dataModelRepository,
                             DatabaseExtractorFactory databaseExtractorFactory,
-                            FileExtractor fileExtractor) {
+                            FileExtractor fileExtractor, ResourceLoader resourceLoader) {
         this.dataModelRepository = dataModelRepository;
         this.databaseExtractorFactory = databaseExtractorFactory;
         this.fileExtractor = fileExtractor;
+        this.resourceLoader = resourceLoader;
     }
 
     //== public methods ==
@@ -60,7 +66,7 @@ public class DataModelService {
      * @throws ReadFromDbExceptions if the table name is invalid
      */
 
-    @Transactional
+    @Transactional(rollbackFor = ReadFromDbExceptions.class)
     public List<DataModel<Object>> extractDataFromTable(String type, String tableName, String url, String user, String password)
             throws ReadFromDbExceptions {
         if (type == null || tableName == null || url == null || user == null || password == null) {
@@ -126,61 +132,121 @@ public class DataModelService {
     }
 
 
-    /**
-     * Reads data from a file.
-     * @param filePath The path of the file to read from
-     * @See FileExtractor for more details
-     * @return A list of DataModel objects
-     * @throws ReadFromDbExceptions if the file path is invalid
-     */
-    public List<DataModel<Object>> extractDataFromFile(String filePath) throws DataExtractionException {
-        List<DataModel<Object>> result;
-        if (filePath == null || filePath.isEmpty()) {
-            throw new IllegalArgumentException("Invalid file path");
-        }
-
-        // Use FileExtractor to check if the file exists and can be read
-        if (!fileExtractor.exists(filePath) || !fileExtractor.canRead(filePath)) {
-            throw new DataExtractionException("File does not exist or cannot be read",
-                    ErrorType.FILE_NOT_READABLE);
-        }
-
+    public List<DataModel<Object>> extractDataFromFile(String resourcePath) throws DataExtractionException {
         try {
-            List<DataModel<Object>> dataModels = fileExtractor.readDataWithApacheCSV(filePath);
-            extract(dataModels);
-            dataModelRepository.saveAll(dataModels);
-            result = dataModels;
+            Resource resource = resourceLoader.getResource("classpath:" + resourcePath);
+            if (!resource.exists()) {
+                throw new DataExtractionException("File does not exist or cannot be read",
+                        ErrorType.FILE_NOT_READABLE);
+            }
+
+            try (InputStream inputStream = resource.getInputStream()) {
+                List<DataModel<Object>> dataModels = fileExtractor.readDataWithApacheCSV(inputStream);
+                extract(dataModels); // Processing extracted data
+                dataModelRepository.saveAll(dataModels);
+                return dataModels;
+            }
         } catch (IOException e) {
             log.error("Error while reading data from file", e);
-            e.printStackTrace();
-            throw new DataExtractionException(e.getMessage(),
-                    ErrorType.FILE_NOT_READABLE);
+            throw new DataExtractionException("Error reading from file: " + e.getMessage(), ErrorType.FILE_NOT_READABLE);
+        }
+    }
+
+    // == Data Load Phase ==
+
+    /*
+     * Data loading to csv file destination
+     * @param dataModels List of DataModel objects
+     * The list must not be null
+     * @param filePath The path of the file to write to
+     * The file path must be a valid path
+     * @throws DataExtractionException if the file path is invalid
+     * @throws IOException if an I/O error occurs
+     * @return A boolean value indicating the success of the operation
+     */
+    public void loadDataToCSV(List<DataModel<Object>> dataModels, String filePath) throws DataExtractionException, IOException {
+        if (dataModels == null || filePath == null || filePath.isEmpty()) {
+            throw new IllegalArgumentException("Invalid arguments");
         }
 
-        return result;
+        // Use FileExtractor to check if the file can be written to
+        if (!fileExtractor.canWrite(filePath)) {
+            throw new DataExtractionException("File cannot be written to",
+                    ErrorType.FILE_NOT_WRITABLE);
+        }
+
+        // Write the data to the file
+        fileExtractor.writeDataWithApacheCSV(dataModels, filePath);
     }
+
 
 
     //== private methods ==
 
-    void extract(List<DataModel<Object>> dataModels) throws DataExtractionException {
-        if (dataModels != null && !dataModels.isEmpty()) {
-            for (DataModel<Object> dataModel : dataModels) {
-                if (dataModel.getAttributesMap() != null) {
-                    for (DataAttributes<Object> dataAttributes : dataModel.getAttributesMap().values()) {
-                        dataAttributes.transformValue();
-                        dataAttributes.applyDefaultValue();
-                        if (!dataAttributes.applyValidationRules()) {
-                            log.error("Validation failed for attribute: {}", dataAttributes.getAttributeName());
-                            throw new DataExtractionException("Validation failed for attribute: " + dataAttributes.getAttributeName(),
-                                    ErrorType.VALIDATION_FAILED);
-                        }
-                        dataAttributes.setLastUpdatedDate(Instant.now());
-                    }
+    private void extract(List<DataModel<Object>> dataModels) throws DataExtractionException {
+        validateDataModels(dataModels);
+        Map<String, List<DataAttributes<Object>>> categorizedAttributes = categorizeAttributesByType(dataModels);
+        processAttributes(categorizedAttributes);
+        saveProcessedDataModels(dataModels);
+    }
+
+    private void validateDataModels(List<DataModel<Object>> dataModels) throws DataExtractionException {
+        if (dataModels == null) {
+            throw new DataExtractionException("Data models list cannot be null.", ErrorType.DATA_EXTRACTION_FAILED);
+        }
+    }
+
+    private Map<String, List<DataAttributes<Object>>> categorizeAttributesByType(List<DataModel<Object>> dataModels) {
+        Map<String, List<DataAttributes<Object>>> categorizedAttributes = new HashMap<>();
+        categorizedAttributes.put("numerical", new ArrayList<>());
+        categorizedAttributes.put("categorical", new ArrayList<>());
+
+        for (DataModel<Object> dataModel : dataModels) {
+            if (dataModel.getAttributesMap() != null) {
+                for (DataAttributes<Object> attr : dataModel.getAttributesMap().values()) {
+                    categorizeAttribute(categorizedAttributes, attr);
+                    attr.transformValue();
                 }
+            }
+        }
+        return categorizedAttributes;
+    }
+
+    private void categorizeAttribute(Map<String, List<DataAttributes<Object>>> categorizedAttributes, DataAttributes<Object> attr) {
+        if ("Integer".equals(attr.getType()) || "Double".equals(attr.getType())) {
+            categorizedAttributes.get("numerical").add(attr);
+        } else if ("String".equals(attr.getType())) {
+            categorizedAttributes.get("categorical").add(attr);
+        }
+    }
+
+    private void processAttributes(Map<String, List<DataAttributes<Object>>> categorizedAttributes) throws DataExtractionException {
+        replaceMissingValues(categorizedAttributes);
+        applyTransformationsAndValidations(categorizedAttributes);
+    }
+
+    private void replaceMissingValues(Map<String, List<DataAttributes<Object>>> categorizedAttributes) {
+        List<DataAttributes<Object>> numericalColumns = categorizedAttributes.get("numerical");
+        List<DataAttributes<Object>> categoricalColumns = categorizedAttributes.get("categorical");
+        numericalColumns.forEach(column -> column.replaceMissingNumericalValues(numericalColumns));
+        categoricalColumns.forEach(column -> column.replaceMissingCategoricalValues(categoricalColumns));
+    }
+
+    private void applyTransformationsAndValidations(Map<String, List<DataAttributes<Object>>> categorizedAttributes) throws DataExtractionException {
+        for (List<DataAttributes<Object>> attributes : categorizedAttributes.values()) {
+            for (DataAttributes<Object> attr : attributes) {
+                attr.applyDefaultValue();
+                if (!attr.applyValidationRules()) {
+                    log.error("Validation failed for attribute: {}", attr.getAttributeName());
+                    throw new DataExtractionException("Validation failed for attribute: " + attr.getAttributeName(), ErrorType.VALIDATION_FAILED);
+                }
+                attr.setLastUpdatedDate(Instant.now());
             }
         }
     }
 
+    private void saveProcessedDataModels(List<DataModel<Object>> dataModels) {
+        dataModelRepository.saveAll(dataModels);
+    }
 
 }

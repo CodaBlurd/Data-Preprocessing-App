@@ -1,0 +1,6 @@
+id,name,type,value
+1,Height,Integer,180
+2,Weight,Integer,75
+3,Name,String,John Doe
+4,Age,Integer,30
+5,Gender,String,Male

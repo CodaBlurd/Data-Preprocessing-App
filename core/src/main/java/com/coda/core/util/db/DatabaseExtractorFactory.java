@@ -1,5 +1,6 @@
 package com.coda.core.util.db;
 
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 /**
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Service;
  * @see DatabaseNames
  * @see DatabaseNames#MYSQL
  */
-@Service
+@Component
 public class DatabaseExtractorFactory {
 
     /**

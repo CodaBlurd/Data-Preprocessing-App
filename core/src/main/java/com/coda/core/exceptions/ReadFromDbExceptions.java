@@ -9,10 +9,8 @@ import lombok.Getter;
  */
 
 
-
+@Getter
 public class ReadFromDbExceptions extends RuntimeException{
-
-    @Getter
     private final ErrorType errorType;
     public ReadFromDbExceptions(String message, ErrorType errorType) {
         super(message);
