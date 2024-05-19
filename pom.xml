@@ -46,6 +46,7 @@
 		<mysql.version>8.0.33</mysql.version>
 		<mongodb-driver.version>4.11.1</mongodb-driver.version>
 		<apache-commons-csv.version>1.10.0</apache-commons-csv.version>
+		<checkstyle.version>10.16.0</checkstyle.version>
 
 	</properties>
 	<dependencyManagement>
@@ -57,6 +58,14 @@
 				<version>${lombok.version}</version>
 				<scope>provided</scope>
 			</dependency>
+
+			<!-- https://mvnrepository.com/artifact/com.puppycrawl.tools/checkstyle -->
+			<dependency>
+				<groupId>com.puppycrawl.tools</groupId>
+				<artifactId>checkstyle</artifactId>
+				<version>${checkstyle.version}</version>
+			</dependency>
+
 
 			<!-- MySQL -->
 			<dependency>
@@ -185,28 +194,6 @@
 
 	<build>
 		<plugins>
-			<!-- Maven Checkstyle Plugin -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-checkstyle-plugin</artifactId>
-				<version>3.1.2</version>
-				<configuration>
-					<configLocation>checkstyle.xml</configLocation>
-					<encoding>UTF-8</encoding>
-					<consoleOutput>true</consoleOutput>
-					<failsOnError>true</failsOnError>
-					<linkXRef>false</linkXRef>
-				</configuration>
-				<executions>
-					<execution>
-						<id>validate</id>
-						<phase>validate</phase>
-						<goals>
-							<goal>check</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
 		</plugins>
 	</build>
 

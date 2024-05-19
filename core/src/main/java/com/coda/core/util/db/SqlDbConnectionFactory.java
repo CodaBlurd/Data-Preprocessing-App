@@ -1,28 +1,43 @@
 package com.coda.core.util.db;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 
 /**
- * SqlDbConnectionFactory is a factory class that is used to create a connection to a SQL database.
- * <p> This class is responsible for creating a connection to a SQL database</p>
- * */
+ <p>
+        SqlDbConnectionFactory is a class that
+        creates a connection to a SQL database.
+ </p>
+    <p>
+            It implements the ConnectionFactory interface
+            and overrides the connect method to create
+            a connection to a SQL database.
+    </p>
+ */
 
-public class SqlDbConnectionFactory implements ConnectionFactory{
+@Slf4j
+public class SqlDbConnectionFactory implements ConnectionFactory {
 
-
-        // == load the driver class using static block ==
-        // static block is executed first when the class is loaded
+    // Load the MySQL driver class
         static {
             try {
                 Class.forName(DatabaseNames.MYSQL_DRIVER_MANAGER);
             } catch (ClassNotFoundException e) {
-                e.printStackTrace();
+                log.error(
+                        "Error loading MySQL driver class, "
+                                + "Message: {}, Cause: {}",
+                        e.getMessage(), e.getCause(), e);
+
             }
         }
 
         /**
-         * This method is used to create a connection to a SQL database
+         <p>
+                This method is used to
+         create a connection to a SQL database.
+         </p>
          * @param url The url of the database
          * @param user The username of the database
          * @param password The password of the database
@@ -30,8 +45,9 @@ public class SqlDbConnectionFactory implements ConnectionFactory{
          * @throws Exception if the connection fails
          */
         @Override
-        public Connection connect(String url, String user, String password) throws Exception {
-            return DriverManager.getConnection(url, user, password); //
+        public Connection connect(final String url, final String user,
+                                  final String password) throws Exception {
+            return DriverManager.getConnection(url, user, password);
 
         }
     }
