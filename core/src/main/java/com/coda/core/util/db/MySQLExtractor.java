@@ -3,44 +3,58 @@ package com.coda.core.util.db;
 import com.coda.core.entities.DataAttributes;
 import com.coda.core.entities.DataModel;
 import com.coda.core.exceptions.ReadFromDbExceptions;
-import com.coda.core.util.ErrorType;
+import com.coda.core.util.types.ErrorType;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
 
-import java.sql.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 
 /**
- * This interface is used to extract data from a mysql type database
- * <p> This interface is used to extract data from a mysql type database</p>
- * {@code @Override} annotation to override the readData method
- *
+ * This class is used to extract data from a mysql type database.
+ * <p> This class is used to extract data from a mysql type database</p>
  */
 @Slf4j
-public class MySQLExtractor implements DatabaseExtractor {
-
-    private final ConnectionFactory connectionFactory = new SqlDbConnectionFactory();
+public final class MySQLExtractor implements DatabaseExtractor {
 
     /**
-     * This method is used to extract data from a mysql type database
-     * @param tableName The name of the table to be extracted
-     * @param url The url of the database
-     * @param user The username of the database
-     * @param password The password of the database
-     * @return A list of DataModel objects
-     * @throws Exception if the table name is invalid
+     * The connection factory to be used to connect to the database.
+     * <p> The connection factory to be used to connect to the database.</p>
+     */
+    private final ConnectionFactory connectionFactory
+            = new SqlDbConnectionFactory();
+
+    /**
+     * This method is used to extract data from a mysql type database.
+     * @param tableName The name of the table to be extracted.
+     * @param url The url of the database.
+     * @param user The username of the database.
+     * @param password The password of the database.
+     * @return A list of DataModel objects.
+     * @throws Exception if the table name is invalid.
      */
 
     @Override
-    public List<DataModel<Object>> readData(String tableName, String url, String user, String password) throws Exception {
+    public List<DataModel<Object>> readData(
+            final String tableName, final String url,
+            final String user, final String password) throws Exception {
         // Validate or sanitize tableName to ensure it's safe to use in a query
         if (!isTableNameValid(tableName)) {
             throw new IllegalArgumentException("Invalid table name");
         }
 
-        String query = String.format(QueriesInterface.READ_FROM_MYSQL, tableName);
+        String query = String.format(Queries.READ_FROM_MYSQL, tableName);
 
-        try (Connection connection = connectionFactory.connect(url, user, password);
+        try (Connection connection
+                     = connectionFactory.connect(url, user, password);
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
@@ -56,7 +70,8 @@ public class MySQLExtractor implements DatabaseExtractor {
             }
 
             while (resultSet.next()) {
-                Map<String, DataAttributes<Object>> attributes = new HashMap<>();
+                Map<String, DataAttributes<Object>> attributes
+                        = new HashMap<>();
                 for (int i = 1; i <= columnCount; i++) {
                     DataAttributes<Object> attribute = new DataAttributes<>(
                             metaData.getColumnName(i),
@@ -66,7 +81,9 @@ public class MySQLExtractor implements DatabaseExtractor {
                     );
                     attributes.put(metaData.getColumnName(i), attribute);
                 }
-                DataModel<Object> dataModel = new DataModel<>(resultSet.getString("id"), attributes); // Assuming 'id' is a column
+                DataModel<Object> dataModel
+                        = new DataModel<>(resultSet
+                        .getString("id"), attributes);
                 dataModels.add(dataModel);
             }
 
@@ -75,21 +92,23 @@ public class MySQLExtractor implements DatabaseExtractor {
             return dataModels;
         } catch (SQLException e) {
             log.error("Error while reading data from database", e);
-            throw new ReadFromDbExceptions("Error while reading data from database",
+            throw new ReadFromDbExceptions(
+                    "Error while reading data from database",
                     ErrorType.READ_FROM_DB_EXCEPTIONS);
-
         }
     }
 
     /**
-     * This method is used to validate the table name to protect against SQL injection
-     * @param tableName The name of the table to be validated
-     * @return A boolean value
+     <p>This method is used to validate the table name.
+     to protect against SQL injection. </p>
+     * @param tableName The name of the table to be validated.
+     * @return A boolean value.
      */
 
-private boolean isTableNameValid(String tableName) {
+private boolean isTableNameValid(final String tableName) {
     // Check if tableName is not null and not empty
-    if (tableName == null || tableName.trim().isEmpty()) {
+    if (tableName == null
+            || tableName.trim().isEmpty()) {
         return false;
     }
 
@@ -105,8 +124,8 @@ private boolean isTableNameValid(String tableName) {
 // == Not used for this class, but required to implement the interface ==
 
     @Override
-    public Map<String, DataModel<Document>> readData(String databaseName,
-   String tableName, String url) {
+    public Map<String, DataModel<Document>> readData(final String databaseName,
+   final String tableName, final String url) {
         return new HashMap<>();
     }
 }

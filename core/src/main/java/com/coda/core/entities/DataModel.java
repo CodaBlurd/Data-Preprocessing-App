@@ -9,29 +9,40 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Data model class
- * <p> This class is responsible for holding the data set model to be cleaned</p>
- * The data model class will hold the data set model to be cleaned
- * This class is a dynamic class that will be generated based on the data set model
- * {@code @GeneratedValue} annotation to specify the generation strategy
- *
- *
- */
+ * DataModel class to hold the data set model.
+ * <p> This class is responsible for
+ * holding the data set model to be cleaned
+ * </p>
+ * @param <T> the type of the data set model
 
+ */
 @Slf4j
 @Document(collection = "data_model")
 @Data
 @NoArgsConstructor
 public class DataModel<T> {
-//== fields ==
+    /**
+     * The id of the data model.
+     */
     @Id
     private String id;
 
-    private Map<String, DataAttributes<T>> attributesMap = new HashMap<>();
+    /**
+     * The attributes of the data model.
+     */
+    private Map<String, DataAttributes<T>> attributesMap
+            = new HashMap<>();
 
-    public DataModel(String id, Map<String, DataAttributes<T>> attributes) {
-        this.id = id;
-        this.attributesMap = attributes;
+    /**
+     * Constructor for DataModel.
+     * @param dataModelId the id of the data model.
+     * @param attr the attributes of the data model.
+     */
+
+    public DataModel(final String dataModelId,
+                     final Map<String, DataAttributes<T>> attr) {
+        this.id = dataModelId;
+        this.attributesMap = attr;
     }
 }
 

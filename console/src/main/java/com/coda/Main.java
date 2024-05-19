@@ -15,28 +15,45 @@ import java.util.List;
 
 @SpringBootApplication
 @Slf4j
-public class Main {
+ public class Main {
+    /**
+     * The resource loader.
+     */
     @Autowired
     private ResourceLoader resourceLoader;
 
-    public static void main(String[] args) {
+
+    /**
+     * The main method is used to start the application.
+     * @param args The arguments that are passed to the application.
+     */
+    public static void main(final String[] args) {
         SpringApplication.run(Main.class, args);
     }
 
+    /**
+     * The runner method is used to run the application.
+     * @param dataModelService The data model service.
+     * @return The command line runner object.
+     */
     @Bean
-    public CommandLineRunner runner(DataModelService dataModelService) {
+    public CommandLineRunner runner(final DataModelService dataModelService) {
         return args -> {
-            String inputFilePath = "file.csv"; // Ensure this path is valid in your resources
+            String inputFilePath = "file.csv";
             String outputFilePath = "fileOutput.csv";
             try {
-                List<DataModel<Object>> dataModels = dataModelService.extractDataFromFile(inputFilePath);
+                List<DataModel<Object>> dataModels
+                        = dataModelService.extractDataFromFile(inputFilePath);
                 dataModelService.loadDataToCSV(dataModels, outputFilePath);
-                log.info("ETL process completed successfully. Output written to {}", outputFilePath);
+                log.info("ETL process completed successfully."
+                        + " Output written to {}", outputFilePath);
             } catch (DataExtractionException e) {
-                log.error("Failed to process ETL due to: {}", e.getMessage());
+                log.error("Failed to process ETL due to: {}",
+                        e.getMessage());
             }
         };
     }
 
 
 }
+
