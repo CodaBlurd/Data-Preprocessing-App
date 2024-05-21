@@ -5,6 +5,8 @@ import com.coda.core.util.types.ErrorType;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 /**
  <p>
@@ -14,6 +16,7 @@ import com.mongodb.client.MongoDatabase;
  </p>
  */
 
+@Component
 public final class MongoDBConnectionFactory {
 
     /**
@@ -30,12 +33,16 @@ public final class MongoDBConnectionFactory {
      * or the url is invalid.
      */
 
-    public MongoDBConnectionFactory(final String connectionUrl) {
-        if (connectionUrl == null || connectionUrl.isEmpty()) {
+    public MongoDBConnectionFactory(@Value("${spring.data.mongodb.uri}")
+                                    final String connectionUrl) {
+        if (connectionUrl == null
+                || connectionUrl.isEmpty()) {
+
             throw new ReadFromDbExceptions(
                     "Invalid connection url",
                     ErrorType.DB_NOT_FOUND);
         }
+
         this.mongoClient
                 = MongoClients.create(connectionUrl);
     }
@@ -55,6 +62,16 @@ public final class MongoDBConnectionFactory {
            throw new IllegalArgumentException("Invalid database name");
         }
         return mongoClient.getDatabase(dbName);
+    }
+
+    /**
+     * This method is used to get the MongoClient object.
+     * @return The MongoClient object.
+     */
+
+    public MongoClient getMongoClient() {
+
+        return mongoClient;
     }
 
     /**

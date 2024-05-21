@@ -11,6 +11,6 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface DataModelRepository
-        extends MongoRepository<DataModel, String> {
+        extends MongoRepository<DataModel<?>, String> {
 
 }

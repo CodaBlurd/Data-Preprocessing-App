@@ -28,6 +28,7 @@ import java.util.List;
      * @param args The arguments that are passed to the application.
      */
     public static void main(final String[] args) {
+
         SpringApplication.run(Main.class, args);
     }
 

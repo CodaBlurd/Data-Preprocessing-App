@@ -107,6 +107,22 @@ public enum ErrorType {
      * when there is no data.
      * </p>
      */
-    NO_DATA, READ_ERROR,
+    NO_DATA,
+
+    /**
+     * READ_ERROR is used to identify
+     * an error thrown
+     * from reading data from data sources.
+     */
+    READ_ERROR,
+
+    /**
+     * TRANSFORMATION_FAILED
+     * this error constant is used to
+     * identify when transformation
+     * of the data value or values failed.
+     */
+
+    TRANSFORMATION_FAILED, TRANSFORMATION_STRATEGY_NOT_FOUND,
 }
 
