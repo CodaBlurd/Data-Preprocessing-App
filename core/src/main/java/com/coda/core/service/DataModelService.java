@@ -14,6 +14,7 @@ import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
@@ -58,21 +59,30 @@ public class DataModelService {
     private final ResourceLoader resourceLoader;
 
     /**
+     * The MongoTemplate interface.
+     * This is used to interact with the MongoDB database.
+     */
+    private final MongoTemplate mongoTemplate;
+
+    /**
      * Constructor for DataModelService.
      * @param dataModels the DataModelRepository object.
      * @param dbExtractorFactory the DatabaseExtractorFactory object.
      * @param fExtractor the FileExtractor object.
      * @param resLoader the ResourceLoader object.
+     * @param template the MongoTemplate object.
      */
     @Autowired
     public DataModelService(final DataModelRepository dataModels,
                             final DatabaseExtractorFactory dbExtractorFactory,
                             final FileExtractor fExtractor,
-                            final ResourceLoader resLoader) {
+                            final ResourceLoader resLoader,
+                            final MongoTemplate template) {
         this.dataModelRepository = dataModels;
         this.databaseExtractorFactory = dbExtractorFactory;
         this.fileExtractor = fExtractor;
         this.resourceLoader = resLoader;
+        this.mongoTemplate = template;
     }
 
     //== public methods ==

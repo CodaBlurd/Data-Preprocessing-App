@@ -1,4 +1,5 @@
 package com.coda.core.entities;
+import com.coda.core.exceptions.TransformationException;
 import com.coda.core.util.transform.DoubleTransform;
 import com.coda.core.util.transform.IntegerTransform;
 import com.coda.core.util.transform.StringTransform;
@@ -11,6 +12,7 @@ import com.coda.core.util.transform.ObjectTransform;
 import java.util.Objects;
 import java.util.OptionalDouble;
 import com.coda.core.util.transform.TransformValue;
+import com.coda.core.util.types.ErrorType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -53,7 +55,8 @@ public final class DataAttributes<T> {
      * The value of the attribute.
      * i.e. the data in the column.
      */
-    private Optional<T> value = Optional.empty();
+    @Getter
+    private T value;
 
     /**
      * The type of the attribute.
@@ -134,9 +137,19 @@ public final class DataAttributes<T> {
         this.attributeName = columnName;
 
         // Safe cast, already checked type
-        this.value
-                = Optional.ofNullable(
-                        clazzToken.cast(object));
+        if (object != null) {
+
+            try {
+
+                this.value = clazzToken.cast(object);
+            } catch (ClassCastException e) {
+                throw new IllegalArgumentException(
+                        "Object cannot be cast to specified class type "
+                                + clazzToken.getName(), e);
+            }
+        } else {
+            this.value = null;
+        }
         this.type = columnTypeName;
 
         this.typeClazz = clazzToken;
@@ -182,10 +195,15 @@ public final class DataAttributes<T> {
      * Transforms the value based on its type.
      * @return T the transformed value of type T of the attribute
      */
-    public Optional<T> transformValue() {
-        // Check if the value is present to proceed with transformation
-        if (value.isEmpty()) {
-            return Optional.empty();
+    public T transformValue() {
+
+        if (value == null || value instanceof String
+                && ((String) value).isEmpty()) {
+
+            throw new TransformationException(
+                    "Transformation failed, value is null or empty",
+                    ErrorType.TRANSFORMATION_FAILED);
+
         }
 
         // Retrieve the appropriate
@@ -195,19 +213,26 @@ public final class DataAttributes<T> {
         if (transformValue == null) {
             log.error("No transformation strategy found for type: {}",
                     type);
-            return Optional.empty();
+            throw new TransformationException(
+                    "No transformation strategy found",
+                    ErrorType.TRANSFORMATION_STRATEGY_NOT_FOUND);
+
         }
 
 
         try {
             // Attempt to transform the value using the retrieved strategy
-            return transformValue.transformValue(
-                    value.get().toString(),
+            Optional<T> t = transformValue.transformValue(
+                    value.toString(),
                     typeClazz, format);
+            return t.orElse(null);
         } catch (Exception e) {
             log.error("Transformation failed for attribute '{}',"
                     + " type '{}': {}", attributeName, type, e.getMessage());
-            return Optional.empty();
+            throw new TransformationException(
+                    "Error: " + e.getMessage() + " Cause: "
+                    + e.getCause(), ErrorType.TRANSFORMATION_FAILED
+            );
         }
     }
 
@@ -216,9 +241,8 @@ public final class DataAttributes<T> {
      */
     public void cleanCategoricalValues() {
         if (type.equals("String")) {
-            value = value
-                    .map(val -> (T) val.toString()
-                            .replaceAll("[^a-zA-Z0-9]", ""));
+            value.toString()
+                    .replaceAll("[^a-zA-Z0-9]", "");
         }
     }
 
@@ -236,13 +260,11 @@ public final class DataAttributes<T> {
                             .groupingBy(DataAttributes::getValue,
                                     Collectors.counting()));
 
-            T mode = valueCountMap.entrySet().stream()
+            // Replace missing values with the mode
+            value = valueCountMap.entrySet().stream()
                     .max(Map.Entry.comparingByValue())
                     .map(Map.Entry::getKey)
                     .orElse(null);
-
-            // Replace missing values with the mode
-            value = value.or(() -> Optional.ofNullable(mode));
         }
     }
 
@@ -261,9 +283,7 @@ public final class DataAttributes<T> {
                     .average();
 
             if (average.isPresent()) {
-                T meanValue
-                        = typeClazz.cast(average.getAsDouble());
-                value = value.or(() -> Optional.of(meanValue));
+                value = typeClazz.cast(average.getAsDouble());
             } else {
                 log.warn("Mean calculation failed due to empty "
                         + "or invalid data for column: {}", attributeName);
@@ -271,6 +291,9 @@ public final class DataAttributes<T> {
         } else {
             log.error("Attempted to calculate numerical"
                     + " mean for non-numerical type: {}", typeClazz);
+            throw new ArithmeticException(
+                    "Attempt to calculate numerical"
+                            + " mean for non numerical type: {} failed ");
         }
     }
 
@@ -283,7 +306,7 @@ public final class DataAttributes<T> {
      * Applies the default value to the attribute.
      */
     public void applyDefaultValue() {
-        value = value.or(() -> Optional.ofNullable(defaultValue));
+        value = defaultValue;
     }
 
     /**
@@ -309,13 +332,19 @@ public final class DataAttributes<T> {
      * @return boolean whether the validation rules are applied or not
      */
     public boolean applyValidationRules() {
-        return value.map(v -> validationRulesList.stream()
-                .allMatch(rule -> rule.test(v))).orElse(false);
+        if (value == null
+                || (value instanceof String
+                && ((String) value).isEmpty())) {
+            return false;
+        }
+
+        return validationRulesList.stream()
+                .allMatch(rule -> rule.test(value));
     }
 
     /**
      * Sets the validation rules.
-     * @param rules the validation rules to set
+     * @param rules the validation rules to set.
      */
     public void setValidationRules(final String rules) {
         this.validationRules = rules;
@@ -324,13 +353,5 @@ public final class DataAttributes<T> {
         initializeValidationRules();
     }
 
-    /**
-     * gets the value of the attribute.
-     * @return T the value of the attribute
-     */
-
-    public T getValue() {
-        return value.orElse(null);
-    }
 }
 

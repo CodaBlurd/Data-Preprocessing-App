@@ -17,7 +17,7 @@ import java.util.Map;
 
  */
 @Slf4j
-@Document(collection = "data_model")
+@Document(collection = "dataModel")
 @Data
 @NoArgsConstructor
 public class DataModel<T> {
