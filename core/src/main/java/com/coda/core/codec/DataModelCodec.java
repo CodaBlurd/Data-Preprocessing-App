@@ -8,6 +8,7 @@ import org.bson.codecs.Codec;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.types.ObjectId;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,35 +16,36 @@ import java.util.Map;
 public final class DataModelCodec<T> implements Codec<DataModel<T>> {
 
     /**
-     * The codec registry.
-     * This is used to get the codec for the value.
+     * The CodecRegistry used to encode and decode the DataModel.
      */
+
     private final CodecRegistry codecRegistry;
 
     /**
-     * The data attributes codec.
-     * This is used to encode and decode the data attributes.
+     * The Codec used to encode
+     * and decode the DataAttributes.
      */
-    private final Codec<DataAttributes> dataAttributesCodec;
+    private final Codec<DataAttributes<T>> dataAttributesCodec;
 
     /**
-     * DataModelCodec().
-     * This constructor is used to create
-     * a new instance of the DataModelCodec class.
-     * @param registry The codec registry.
+     * Constructor().
+     * @param registry CodecRegistry used to
+     *                encode and decode the DataModel.
+     * @param codec Codec used to encode
+     *                            and decode the DataAttributes.
      */
 
-    public DataModelCodec(final CodecRegistry registry) {
+    public DataModelCodec(final CodecRegistry registry,
+                          final Codec<DataAttributes<T>> codec) {
         this.codecRegistry = registry;
-        this.dataAttributesCodec = codecRegistry.get(DataAttributes.class);
+        this.dataAttributesCodec = codec;
     }
 
     /**
-     * encode().
-     * This method is used to encode the data model.
-     * @param writer The bson writer.
-     * @param dataModel The data model.
-     * @param encoderContext The encoder context.
+     * Encode the DataModel.
+     * @param writer BsonWriter used to encode the DataModel.
+     * @param dataModel DataModel to encode.
+     * @param encoderContext context used to encode the DataModel.
      */
 
     @Override
@@ -51,15 +53,18 @@ public final class DataModelCodec<T> implements Codec<DataModel<T>> {
                        final DataModel<T> dataModel,
                        final EncoderContext encoderContext) {
         writer.writeStartDocument();
-        writer.writeString("id", dataModel.getId());
+        writer.writeObjectId("id", dataModel.getId());
 
         writer.writeName("attributesMap");
         writer.writeStartDocument();
-        for (Map.Entry<String, DataAttributes<T>> entry
-                : dataModel.getAttributesMap().entrySet()) {
-            writer.writeName(entry.getKey());
-            dataAttributesCodec.encode(writer, entry.getValue(),
-                    encoderContext);
+        for (Map.Entry<String, DataAttributes<T>>
+                entry : dataModel.getAttributesMap().entrySet()) {
+
+            if (entry.getKey() != null && entry.getValue() != null) {
+                writer.writeName(entry.getKey());
+                dataAttributesCodec.encode(writer,
+                        entry.getValue(), encoderContext);
+            }
         }
         writer.writeEndDocument();
 
@@ -67,25 +72,22 @@ public final class DataModelCodec<T> implements Codec<DataModel<T>> {
     }
 
     /**
-     * decode().
-     * This method is used to decode the data model.
-     * @param reader The bson reader.
-     * @param decoderContext The decoder context.
-     * @return DataModel<T> The data model.
+     * Decode the DataModel.
+     * @param reader BsonReader used to decode the DataModel.
+     * @param decoderContext context used to decode the DataModel.
+     * @return DataModel decoded.
      */
 
     @Override
     public DataModel<T> decode(final BsonReader reader,
                                final DecoderContext decoderContext) {
         reader.readStartDocument();
-        String id = reader.readString("id");
+        ObjectId id = reader.readObjectId("id");
 
-        Map<String, DataAttributes<T>> attributesMap
-                = new HashMap<>();
+        Map<String, DataAttributes<T>> attributesMap = new HashMap<>();
         reader.readName("attributesMap");
         reader.readStartDocument();
-        while (reader.readBsonType()
-                != org.bson.BsonType.END_OF_DOCUMENT) {
+        while (reader.readBsonType() != org.bson.BsonType.END_OF_DOCUMENT) {
             String key = reader.readName();
             DataAttributes<T> value
                     = dataAttributesCodec.decode(reader, decoderContext);
@@ -98,15 +100,12 @@ public final class DataModelCodec<T> implements Codec<DataModel<T>> {
     }
 
     /**
-     * getEncoderClass().
-     * This method is used to get the encoder class.
-     * @return Class<DataModel<T>> The data model class.
+     * Get the Class of the DataModel.
+     * @return Class of the DataModel.
      */
 
     @Override
     public Class<DataModel<T>> getEncoderClass() {
-
-        return (
-                Class<DataModel<T>>) (Class<?>) DataModel.class;
+        return (Class<DataModel<T>>) (Class<?>) DataModel.class;
     }
 }

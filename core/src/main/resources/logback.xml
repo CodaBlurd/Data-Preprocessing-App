@@ -1,0 +1,6 @@
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+    <logger name="com.coda" level="DEBUG"/>
+    <logger name="org.springframework" level="INFO"/>
+    <AsyncLogger name="com.amazonaws.auth" level="DEBUG" />
+</configuration>

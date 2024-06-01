@@ -1,10 +1,13 @@
 package com.coda.core.entities;
 
-import com.coda.core.entities.DataModel;
-import org.junit.jupiter.api.BeforeEach;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDataModel {
     private DataModel<Object> dataModel;
@@ -14,13 +17,14 @@ public class TestDataModel {
         Map<String, DataAttributes<Object>> attributesMap = Map.of("test_attribute", new DataAttributes<>("test_attribute", "test_value", "test_type",
                 Object.class));
 
-        dataModel = new DataModel<>("test_id", attributesMap);
+        dataModel = new DataModel<>(new ObjectId(), attributesMap);
     }
 
     @Test
     public void testGetId() {
-        String id = dataModel.getId();
-        Assertions.assertEquals("test_id", id, "IDs should match");
+        ObjectId id = dataModel.getId();
+        Assertions.assertNotNull(id, "Id should not be null");
+        assertTrue(ObjectId.isValid(id.toString()), "Id should be a valid ObjectId");
     }
 
     @Test
