@@ -1,74 +1,42 @@
 package com.coda.core.config;
 
-import com.coda.core.codec.DataAttributesCodec;
-import com.coda.core.codec.DataModelCodec;
-import com.coda.core.util.db.MongoDBConnectionFactory;
-import com.mongodb.MongoClientSettings;
-import com.mongodb.client.MongoClients;
+import com.coda.core.util.db.MongoDBUtil;
 import com.mongodb.client.MongoClient;
-import org.bson.codecs.configuration.CodecRegistry;
-import org.bson.codecs.configuration.CodecRegistries;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
 
 @Configuration
 public class MongoDBConfig {
 
     /**
-     * The MongoDBConnectionFactory object used to connect to the database.
-     */
-    private final MongoDBConnectionFactory mongoDBConnectionFactory;
-
-    /**
-     * MongoDBConfig().
-     * This constructor of the MongoDBConfig class.
-     * @param connectionFactory The connection factory object.
-     */
-
-    public MongoDBConfig(final MongoDBConnectionFactory connectionFactory) {
-        this.mongoDBConnectionFactory = connectionFactory;
-    }
-
-    /**
-     * mongoClient().
-     * This bean registers
-     * the custom codecs for the
-     * DataAttributes and DataModel classes.
-     * @return A MongoClient object.
+     * MongoDB client bean.
+     * this bean is used to create a MongoClient instance.
+     * @return MongoClient object.
      */
 
     @Bean
-    public static MongoClient mongoClient() {
-
-        CodecRegistry defaultCodecRegistry
-                = MongoClientSettings.getDefaultCodecRegistry();
-        CodecRegistry customCodecs = CodecRegistries.fromCodecs(
-            new DataAttributesCodec<>(defaultCodecRegistry),
-            new DataModelCodec<>(defaultCodecRegistry)
-        );
-
-        CodecRegistry combinedCodecRegistry
-                = CodecRegistries
-                .fromRegistries(customCodecs, defaultCodecRegistry);
-
-        MongoClientSettings settings
-                = MongoClientSettings.builder()
-            .codecRegistry(combinedCodecRegistry)
-            .build();
-
-        return MongoClients.create(settings);
+    public MongoClient mongoClient() {
+        return MongoDBUtil.createMongoClient();
     }
 
     /**
-     * MongoTemplate().
-     * This method is used to create a connection
-     * to the MongoDB database.
-     * @return A connection to the database.
-     */
+    * This bean is used to create a MongoDatabaseFactory instance.
+    * @return MongoDatabaseFactory object.
+    */
+    @Bean
+    public MongoDatabaseFactory mongoDatabaseFactory() {
+        return new SimpleMongoClientDatabaseFactory(mongoClient(), "admin");
+    }
+    /**
+    * This bean is used to create a MongoTemplate instance.
+    * @return MongoTemplate object.
+    */
+
     @Bean
     public MongoTemplate mongoTemplate() {
-        MongoClient mongoClient = mongoDBConnectionFactory.getMongoClient();
-        return new MongoTemplate(mongoClient, "admin");
+        return new MongoTemplate(mongoDatabaseFactory());
     }
 }

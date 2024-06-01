@@ -6,6 +6,7 @@ import com.coda.core.exceptions.ReadFromDbExceptions;
 import com.coda.core.util.types.ErrorType;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -81,9 +82,13 @@ public final class MySQLExtractor implements DatabaseExtractor {
                     );
                     attributes.put(metaData.getColumnName(i), attribute);
                 }
+                String idStr = resultSet.getString("id");
+                ObjectId objectId
+                        = ObjectId.isValid(idStr)
+                        ? new ObjectId(idStr) : new ObjectId();
+
                 DataModel<Object> dataModel
-                        = new DataModel<>(resultSet
-                        .getString("id"), attributes);
+                        = new DataModel<>(objectId, attributes);
                 dataModels.add(dataModel);
             }
 

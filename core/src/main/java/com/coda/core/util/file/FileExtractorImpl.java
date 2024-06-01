@@ -11,13 +11,12 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Component;
 
-import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.FileInputStream;
 import java.io.Reader;
+import java.io.BufferedReader;
 import java.io.Writer;
-import java.io.File;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,12 +35,19 @@ public final class FileExtractorImpl implements FileExtractor {
     @Override
     public List<DataModel<Object>> readDataWithApacheCSV(final String filePath)
             throws IOException {
-        try (InputStream inputStream = new FileInputStream(filePath)) {
+        try (InputStream inputStream
+                     = Files.newInputStream(Paths.get(filePath))) {
             return readDataWithApacheCSV(inputStream);
         }
     }
 
-    // Implementation for InputStream
+    /**
+     * Overloaded method to read data from an input stream.
+     * Reads data from an input stream using Apache Commons CSV.
+     * @param inputStream The input stream to read data from.
+     * @return A list of data models extracted from the input stream.
+     */
+
     @Override
     public List<DataModel<Object>>
     readDataWithApacheCSV(final InputStream inputStream) {
@@ -68,8 +74,8 @@ public final class FileExtractorImpl implements FileExtractor {
     public boolean exists(final String filePath) {
         return Optional.ofNullable(filePath)
                 .filter(path -> !path.trim().isEmpty())
-                .map(File::new)
-                .map(File::exists)
+                .map(Paths::get)
+                .map(Files::exists)
                 .orElse(false);
     }
 
@@ -77,8 +83,8 @@ public final class FileExtractorImpl implements FileExtractor {
     public boolean canRead(final String filePath) {
         return Optional.ofNullable(filePath)
                 .filter(path -> !path.trim().isEmpty())
-                .map(File::new)
-                .map(File::canRead)
+                .map(Paths::get)
+                .map(Files::isReadable)
                 .orElse(false);
     }
 
@@ -86,12 +92,12 @@ public final class FileExtractorImpl implements FileExtractor {
     public boolean canWrite(final String filePath) {
         return Optional.ofNullable(filePath)
                 .filter(path -> !path.trim().isEmpty())
-                .map(File::new)
-                .map(file -> (file.exists() && file.canWrite())
-                        || (!file.exists()
-                        &&
-                        file.getParentFile().canWrite()))
-                .orElse(false);
+                .map(Paths::get)
+                .map(path -> Files.exists(path)
+                        ? Files.isWritable(path)
+                        : Optional.ofNullable(path.getParent())
+                                .map(Files::isWritable).orElse(false))
+                                .orElse(false);
     }
 
     @Override

@@ -5,11 +5,13 @@ import com.coda.core.entities.DataModel;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Collections;
 
 /**
  <p> MongoDBExtractor is a class that contains
@@ -18,7 +20,30 @@ import java.util.Collections;
  </p>
  * @see MongoDBExtractor
  */
+
+@Component
 public final class MongoDBExtractor implements DatabaseExtractor {
+
+    /**
+     * MongoDBConnectionFactory is a custom class that
+     * provides methods to create a connection
+     * to a MongoDB database.
+     * used as  a dependency in this class.
+     * @see MongoDBConnectionFactory
+     */
+    private final MongoDBConnectionFactory mongoDBConnectionFactory;
+
+    /**
+     * This constructor initializes the mongoDBConnectionFactory field
+     * with the value provided.
+     * @param mongoConnectFactory The MongoDBConnectionFactory object
+     */
+
+    @Autowired
+    public MongoDBExtractor(
+            final MongoDBConnectionFactory mongoConnectFactory) {
+        this.mongoDBConnectionFactory = mongoConnectFactory;
+    }
 
     /**
      <p>This method returns a list of DataModel
@@ -39,14 +64,13 @@ public final class MongoDBExtractor implements DatabaseExtractor {
             throw new IllegalArgumentException("Invalid arguments");
         }
 
-        MongoDBConnectionFactory mongoDBConnectionFactory
-                = new MongoDBConnectionFactory(url);
         MongoDatabase mongoDatabase
                 = mongoDBConnectionFactory.getConnection(databaseName);
         MongoCollection<Document> collection
                 = mongoDatabase.getCollection(tableName);
 
         Map<String, DataModel<Document>> dataModelList = new HashMap<>();
+
         for (Document document : collection.find()) {
             DataModel<Document> dataModel = new DataModel<>();
             Map<String, DataAttributes<Document>> attributes

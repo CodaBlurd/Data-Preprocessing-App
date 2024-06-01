@@ -1,12 +1,17 @@
 package com.coda.core.entities;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.StringJoiner;
 
 /**
  * DataModel class to hold the data set model.
@@ -20,12 +25,18 @@ import java.util.Map;
 @Document(collection = "dataModel")
 @Data
 @NoArgsConstructor
-public class DataModel<T> {
+public class DataModel<T> implements Serializable {
+
+    /**
+     * The versionID for object serialization.
+     */
+    @Serial
+    private static final long serialVersionUID = 1L;
     /**
      * The id of the data model.
      */
     @Id
-    private String id;
+    private ObjectId id;
 
     /**
      * The attributes of the data model.
@@ -39,10 +50,32 @@ public class DataModel<T> {
      * @param attr the attributes of the data model.
      */
 
-    public DataModel(final String dataModelId,
+    public DataModel(final ObjectId dataModelId,
                      final Map<String, DataAttributes<T>> attr) {
         this.id = dataModelId;
-        this.attributesMap = attr;
+        this.attributesMap = attr != null ? attr : new HashMap<>();
+    }
+
+    @Override
+    public final String toString() {
+        StringJoiner attributesJoiner
+                = new StringJoiner(", ",
+                "{", "}");
+
+        for (Map.Entry<String, DataAttributes<T>>
+                entry: attributesMap.entrySet()) {
+
+            attributesJoiner.add(entry.getKey()
+                    + "=" + entry.getValue());
+
+        }
+
+        return "DataModel{"
+                + "id="
+                + id
+                + ", attributesMap="
+                + attributesJoiner
+                + '}';
     }
 }
 

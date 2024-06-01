@@ -17,8 +17,13 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -253,23 +258,38 @@ public class DataModelService {
      */
     public void loadDataToCSV(
             final List<DataModel<Object>> dataModels,
-                              final String filePath)
-            throws DataExtractionException, IOException {
-        if (dataModels == null
-                || filePath == null
-                || filePath.isEmpty()) {
+            final String filePath) throws DataExtractionException, IOException {
+        if (dataModels == null || filePath == null || filePath.isEmpty()) {
             throw new IllegalArgumentException("Invalid arguments");
         }
 
-        // Use FileExtractor to check if the file can be written to
-        if (!fileExtractor.canWrite(filePath)) {
-            throw new DataExtractionException(
-                    "File cannot be written to",
+        try {
+            // Check if the file path is writable
+            Path path = Paths.get(filePath);
+            if (Files.exists(path) && !Files.isWritable(path)) {
+                throw new AccessDeniedException("File cannot be written to");
+            }
+
+            // Use FileExtractor to check if the file can be written to
+            if (!fileExtractor.canWrite(filePath)) {
+                throw new DataExtractionException(
+                        "File cannot be written to",
+                        ErrorType.FILE_NOT_WRITABLE);
+            }
+
+            // Write the data to the file
+            fileExtractor.writeDataWithApacheCSV(dataModels, filePath);
+        } catch (AccessDeniedException e) {
+            log.error("Access denied to file: {}", filePath, e);
+            throw new DataExtractionException("Access denied to file: "
+                    + e.getMessage(),
+                    ErrorType.ACCESS_DENIED);
+        } catch (IOException e) {
+            log.error("Error while writing data to file: {}", filePath, e);
+            throw new DataExtractionException("Error while writing to file: "
+                    + e.getMessage(),
                     ErrorType.FILE_NOT_WRITABLE);
         }
-
-        // Write the data to the file
-        fileExtractor.writeDataWithApacheCSV(dataModels, filePath);
     }
 
 
@@ -350,8 +370,14 @@ public class DataModelService {
                 = categorizedAttributes.get("categorical");
 
         numericalColumns.forEach(
-                column -> column.replaceMissingNumericalValues(
-                        numericalColumns));
+                column -> {
+                    try {
+                        column.replaceMissingNumericalValues(
+                                numericalColumns);
+                    } catch (ClassNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
 
         categoricalColumns.forEach(
                 column -> column.replaceMissingCategoricalValues(

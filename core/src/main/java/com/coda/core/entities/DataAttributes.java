@@ -1,33 +1,42 @@
+
 package com.coda.core.entities;
+
+import com.coda.core.util.transform.TransformValue;
 import com.coda.core.exceptions.TransformationException;
-import com.coda.core.util.transform.DoubleTransform;
 import com.coda.core.util.transform.IntegerTransform;
+import com.coda.core.util.transform.LongTransform;
 import com.coda.core.util.transform.StringTransform;
+import com.coda.core.util.transform.FloatTransform;
+import com.coda.core.util.transform.DoubleTransform;
+import com.coda.core.util.transform.BooleanTransform;
 import com.coda.core.util.transform.LocalDateTimeTransform;
 import com.coda.core.util.transform.InstantTransform;
-import com.coda.core.util.transform.BooleanTransform;
-import com.coda.core.util.transform.LongTransform;
-import com.coda.core.util.transform.FloatTransform;
 import com.coda.core.util.transform.ObjectTransform;
-import java.util.Objects;
-import java.util.OptionalDouble;
-import com.coda.core.util.transform.TransformValue;
+
 import com.coda.core.util.types.ErrorType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import java.time.Instant;
+
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.Set;
+import java.util.HashMap;
+import java.util.HashSet;
+
+import java.io.Serial;
+import java.io.Serializable;
+import java.time.Instant;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.StringJoiner;
 
 /**
  * DTO for {@link DataModel}.
@@ -38,10 +47,15 @@ import java.util.stream.Collectors;
  */
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
-@Setter
+@Getter @Setter
 @Slf4j
-public final class DataAttributes<T> {
+public final class DataAttributes<T> implements Serializable {
+
+    /**
+     * The versionID for object serialization.
+     */
+    @Serial
+    private static final long serialVersionUID = 1L;
     /**
      * The list of validation rules to apply to the attribute.
      * <p>
@@ -55,7 +69,6 @@ public final class DataAttributes<T> {
      * The value of the attribute.
      * i.e. the data in the column.
      */
-    @Getter
     private T value;
 
     /**
@@ -86,7 +99,7 @@ public final class DataAttributes<T> {
      * The default value of the attribute.
      * i.e. the default value of the column.
      */
-    private T defaultValue;
+    private  T defaultValue;
 
     /**
      * The description of the attribute.
@@ -110,7 +123,7 @@ public final class DataAttributes<T> {
      * The metadata of the attribute.
      * i.e. the data about the column.
      */
-    private Map<String, T> metadata;
+    private Map<String, T> metadata = new HashMap<>();
 
     /**
      * The last updated date of the attribute.
@@ -122,7 +135,28 @@ public final class DataAttributes<T> {
      * The type class of the attribute.
      * i.e. the class token for type safety.
      */
-    private Class<T> typeClazz;
+    private String typeClazzName;
+
+    /**
+     * The map of transformation strategies.
+     * <p>
+     *     The map is used to store the transformation strategies
+     *     for the different data types.
+     * </p>
+     */
+
+    private static final Map<String, TransformValue>
+            TRANSFORM_VALUE_MAP = Map.of(
+            "Integer", new IntegerTransform(),
+            "Double", new DoubleTransform(),
+            "String", new StringTransform(),
+            "LocalDateTime", new LocalDateTimeTransform(),
+            "Instant", new InstantTransform(),
+            "Boolean", new BooleanTransform(),
+            "Long", new LongTransform(),
+            "Float", new FloatTransform(),
+            "Object", new ObjectTransform()
+    );
 
     /**
      * Constructor for DataAttributes.
@@ -152,7 +186,7 @@ public final class DataAttributes<T> {
         }
         this.type = columnTypeName;
 
-        this.typeClazz = clazzToken;
+        this.typeClazzName = clazzToken.getName();
 
         // Parse the validation rules
         parseValidationRules();
@@ -171,96 +205,66 @@ public final class DataAttributes<T> {
     }
 
     /**
-     * The map of transformation strategies.
-     * <p>
-     *     The map is used to store the transformation strategies
-     *     for the different data types.
-     * </p>
-     */
-
-    private static final Map<String, TransformValue>
-            TRANSFORM_VALUE_MAP = Map.of(
-            "Integer", new IntegerTransform(),
-            "Double", new DoubleTransform(),
-            "String", new StringTransform(),
-            "LocalDateTime", new LocalDateTimeTransform(),
-            "Instant", new InstantTransform(),
-            "Boolean", new BooleanTransform(),
-            "Long", new LongTransform(),
-            "Float", new FloatTransform(),
-            "Object", new ObjectTransform()
-    );
-
-    /**
      * Transforms the value based on its type.
      * @return T the transformed value of type T of the attribute
      */
+    @SuppressWarnings("unchecked")
     public T transformValue() {
-
-        if (value == null || value instanceof String
-                && ((String) value).isEmpty()) {
-
+        if (value == null || (value instanceof String
+                && ((String) value).isEmpty())) {
             throw new TransformationException(
                     "Transformation failed, value is null or empty",
                     ErrorType.TRANSFORMATION_FAILED);
-
         }
 
-        // Retrieve the appropriate
-        // transformation strategy from the map based on the 'type'
-        TransformValue transformValue
-                = TRANSFORM_VALUE_MAP.get(type);
+        TransformValue transformValue = TRANSFORM_VALUE_MAP.get(type);
         if (transformValue == null) {
-            log.error("No transformation strategy found for type: {}",
-                    type);
+            log.error("No transformation strategy found for type: {}", type);
             throw new TransformationException(
                     "No transformation strategy found",
                     ErrorType.TRANSFORMATION_STRATEGY_NOT_FOUND);
-
         }
 
-
         try {
-            // Attempt to transform the value using the retrieved strategy
-            Optional<T> t = transformValue.transformValue(
-                    value.toString(),
-                    typeClazz, format);
-            return t.orElse(null);
+            Optional<?> transformedValue
+                    = transformValue.transformValue(value.toString(),
+                    Class.forName(typeClazzName), format);
+            return (T) transformedValue.orElse(null);
         } catch (Exception e) {
-            log.error("Transformation failed for attribute '{}',"
-                    + " type '{}': {}", attributeName, type, e.getMessage());
+            log.error("Transformation failed for attribute '{}', "
+                    + "type '{}': {}", attributeName, type, e.getMessage());
             throw new TransformationException(
-                    "Error: " + e.getMessage() + " Cause: "
-                    + e.getCause(), ErrorType.TRANSFORMATION_FAILED
-            );
+                    "Error: " + e.getMessage() + " Cause: " + e.getCause(),
+                    ErrorType.TRANSFORMATION_FAILED);
         }
     }
 
     /**
      * Cleans the categorical values.
      */
-    public void cleanCategoricalValues() {
-        if (type.equals("String")) {
-            value.toString()
-                    .replaceAll("[^a-zA-Z0-9]", "");
+    @SuppressWarnings("unchecked")
+    public void cleanCategoricalValues() throws ClassNotFoundException {
+        if ("String".equals(type)) {
+            value = (T) Class.forName(typeClazzName)
+                    .cast(((String) value)
+                            .replaceAll("[^a-zA-Z0-9]", ""));
         }
     }
 
     /**
-     * Replaces missing categorical values with the mode of the column.
+     * Replaces missing categorical values
+     * with the mode of the column.
      * @param column the list of data attributes of the column.
      */
     public void replaceMissingCategoricalValues(
             final List<DataAttributes<T>> column) {
-        if (type.equals("String")) {
-            // Calculate the mode of the column
-            Map<T, Long> valueCountMap
-                    = column.stream()
+
+        if ("String".equals(type)) {
+            Map<T, Long> valueCountMap = column.stream()
                     .collect(Collectors
                             .groupingBy(DataAttributes::getValue,
-                                    Collectors.counting()));
+                            Collectors.counting()));
 
-            // Replace missing values with the mode
             value = valueCountMap.entrySet().stream()
                     .max(Map.Entry.comparingByValue())
                     .map(Map.Entry::getKey)
@@ -269,31 +273,36 @@ public final class DataAttributes<T> {
     }
 
     /**
-     * Replaces missing numerical values with the mean of the column.
+     * Replaces missing numerical values
+     * with the mean of the column.
      * @param column the list of data attributes of the column.
      */
+    @SuppressWarnings("unchecked")
     public void replaceMissingNumericalValues(
-            final List<DataAttributes<T>> column) {
-        if (Number.class.isAssignableFrom(typeClazz)) {
-            OptionalDouble average
-                    = column.stream()
+            final List<DataAttributes<T>> column)
+            throws ClassNotFoundException {
+
+        if (Number.class.isAssignableFrom(Class.forName(typeClazzName))) {
+            OptionalDouble average = column.stream()
                     .filter(attr -> attr.getValue() != null)
                     .mapToDouble(attr -> ((Number) attr.getValue())
                             .doubleValue())
                     .average();
 
             if (average.isPresent()) {
-                value = typeClazz.cast(average.getAsDouble());
+                value = (T) Class.forName(typeClazzName)
+                        .cast(average.getAsDouble());
             } else {
                 log.warn("Mean calculation failed due to empty "
-                        + "or invalid data for column: {}", attributeName);
+                        + "or invalid data for column: {}",
+                        attributeName);
             }
         } else {
-            log.error("Attempted to calculate numerical"
-                    + " mean for non-numerical type: {}", typeClazz);
-            throw new ArithmeticException(
-                    "Attempt to calculate numerical"
-                            + " mean for non numerical type: {} failed ");
+            log.error("Attempted to calculate numerical "
+                            + "mean for non-numerical type: {}",
+                    typeClazzName);
+            throw new ArithmeticException("Attempt to calculate numerical mean "
+                    + "for non-numerical type failed");
         }
     }
 
@@ -307,6 +316,7 @@ public final class DataAttributes<T> {
      */
     public void applyDefaultValue() {
         value = defaultValue;
+
     }
 
     /**
@@ -317,13 +327,14 @@ public final class DataAttributes<T> {
             validationRulesList.add(Objects::nonNull);
         }
         if (parsedRules.contains("non-negative")
-                && Number.class.isAssignableFrom(typeClazz)) {
-            validationRulesList.add(val -> ((Number) val)
-                    .doubleValue() >= 0);
+                && Number.class.isAssignableFrom(value.getClass())) {
+            validationRulesList
+                    .add(val -> ((Number) val).doubleValue() >= 0);
         }
         if (parsedRules.contains("non-empty")
-                && String.class.equals(typeClazz)) {
-            validationRulesList.add(val -> !((String) val).isEmpty());
+                && value instanceof String) {
+            validationRulesList
+                    .add(val -> !((String) val).isEmpty());
         }
     }
 
@@ -353,5 +364,24 @@ public final class DataAttributes<T> {
         initializeValidationRules();
     }
 
+    @Override
+    public String toString() {
+        return new StringJoiner(", ",
+                DataAttributes.class.getSimpleName() + "[", "]")
+                .add("validationRulesList=" + validationRulesList)
+                .add("value=" + value)
+                .add("type='" + type + "'")
+                .add("attributeName='" + attributeName + "'")
+                .add("format='" + format + "'")
+                .add("required=" + required)
+                .add("defaultValue=" + defaultValue)
+                .add("description='" + description + "'")
+                .add("validationRules='" + validationRules + "'")
+                .add("parsedRules=" + parsedRules)
+                .add("metadata=" + metadata)
+                .add("lastUpdatedDate=" + lastUpdatedDate)
+                .add("typeClazzName='" + typeClazzName + "'")
+                .toString();
+    }
 }
 

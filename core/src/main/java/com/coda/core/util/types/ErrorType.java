@@ -123,6 +123,20 @@ public enum ErrorType {
      * of the data value or values failed.
      */
 
-    TRANSFORMATION_FAILED, TRANSFORMATION_STRATEGY_NOT_FOUND,
+    TRANSFORMATION_FAILED,
+
+    /**
+     * TRANSFORMATION_STRATEGY_NOT_FOUND
+     * identifies error thrown when no,
+     * suitable transformation type found.
+     */
+    TRANSFORMATION_STRATEGY_NOT_FOUND,
+
+    /**
+     * DATA_DESERIALIZATION_ERROR.
+     * Identify when serialization
+     * of class data failed.
+     */
+    DATA_DESERIALIZATION_ERROR, ACCESS_DENIED,
 }
 
