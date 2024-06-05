@@ -137,6 +137,6 @@ public enum ErrorType {
      * Identify when serialization
      * of class data failed.
      */
-    DATA_DESERIALIZATION_ERROR, ACCESS_DENIED,
+    DATA_DESERIALIZATION_ERROR, ACCESS_DENIED, INVALID_FILE_PATH, UNKNOWN,
 }
 

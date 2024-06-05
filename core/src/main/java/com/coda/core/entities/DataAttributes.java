@@ -336,6 +336,7 @@ public final class DataAttributes<T> implements Serializable {
             validationRulesList
                     .add(val -> !((String) val).isEmpty());
         }
+
     }
 
     /**
