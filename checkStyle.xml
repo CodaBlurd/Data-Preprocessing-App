@@ -13,7 +13,6 @@
         <property name="eachLine" value="true"/>
     </module>
 
-
     <module name="LineLength">
         <property name="max" value="120"/>
         <property name="ignorePattern" value="^package.*|^import.*|a href|http"/>
@@ -25,51 +24,40 @@
         <module name="JavadocMethod"/>
         <module name="JavadocVariable"/>
 
+        <!-- Indentation and Spacing -->
         <module name="Indentation">
             <property name="basicOffset" value="4"/>
             <property name="braceAdjustment" value="0"/>
             <property name="caseIndent" value="4"/>
             <property name="tabWidth" value="4"/>
         </module>
-
-        <module name="MethodLength">
-            <property name="max" value="50"/>
-        </module>
-
-        <module name="ParameterNumber">
-            <property name="max" value="5"/>
-        </module>
-
         <module name="WhitespaceAround"/>
         <module name="WhitespaceAfter"/>
 
+        <!-- Curly Braces -->
         <module name="LeftCurly">
             <property name="option" value="eol"/>
         </module>
-
         <module name="RightCurly">
             <property name="option" value="alone"/>
         </module>
-
         <module name="NeedBraces"/>
 
+        <!-- Code Layout -->
         <module name="NoLineWrap"/>
-
         <module name="EmptyLineSeparator"/>
 
+        <!-- Imports -->
         <module name="ImportOrder">
             <property name="ordered" value="true"/>
             <property name="separated" value="true"/>
             <property name="groups" value="java,javax,org,com"/>
         </module>
-
         <module name="RedundantImport"/>
-
         <module name="UnusedImports"/>
-
-        <module name="VariableDeclarationUsageDistance"/>
-
         <module name="AvoidStarImport"/>
+
+        <!-- Variable and Method Naming -->
         <module name="ConstantName"/>
         <module name="LocalFinalVariableName"/>
         <module name="MemberName"/>
@@ -77,6 +65,22 @@
         <module name="ParameterName"/>
         <module name="StaticVariableName"/>
         <module name="TypeName"/>
+
+        <!-- Visibility -->
         <module name="VisibilityModifier"/>
+
+        <!-- Method Length and Parameter Number -->
+        <module name="MethodLength">
+            <property name="max" value="50"/>
+        </module>
+        <module name="ParameterNumber">
+            <property name="max" value="5"/>
+        </module>
+
+        <!-- Other Checks -->
+        <module name="VariableDeclarationUsageDistance"/>
+        <module name="HideUtilityClassConstructor"/>
+        <module name="FinalClass"/>
+        <module name="DesignForExtension"/>
     </module>
 </module>
