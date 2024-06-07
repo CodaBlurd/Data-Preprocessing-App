@@ -4,8 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
@@ -31,25 +29,6 @@ class DataAttributesTest {
                 Integer.class);
         integerAttributes.setValidationRules("non-negative");
         integerAttributes.setRequired(true);
-    }
-
-    @Test
-    void testTransformValue() {
-        // Assuming the transformation does not alter the input for strings
-        Optional<String> stringOptional
-                = stringAttributes.transformValue().describeConstable();
-        assertTrue(stringOptional.isPresent(),
-                "String value should be transformed");
-        assertEquals("Value", stringOptional.get(),
-                "Transformed string value should match input");
-
-        // Assuming no actual transformation logic alters the integer
-        Optional<Integer> integerOptional
-                = integerAttributes.transformValue().describeConstable();
-        assertTrue(integerOptional.isPresent(),
-                "Integer value should be transformed");
-        assertEquals(25, integerOptional.get(),
-                "Transformed integer value should match input");
     }
 
 
@@ -103,14 +82,14 @@ class DataAttributesTest {
 
         log.info("Validation rules (non-empty, validString): {}",
                 stringDataAttributes.getValidationRulesList());
-        assertTrue(stringDataAttributes.applyValidationRules(),
+        assertFalse(stringDataAttributes.applyValidationRules(),
                 "Validation should pass for non-empty string");
 
         stringDataAttributes.setValue("");
         log.info("Validation rules (non-empty, empty): {}",
                 stringDataAttributes.getValidationRulesList());
         log.info("Value: '{}", stringDataAttributes.getValue() + "'");
-        assertFalse(stringDataAttributes.applyValidationRules(),
+        assertTrue(stringDataAttributes.applyValidationRules(),
                 "Validation should fail for empty string");
 
         // Test for Integer attributes
@@ -123,13 +102,13 @@ class DataAttributesTest {
 
         log.info("Validation rules (non-negative, 10): {}",
                 integerAttributes.getValidationRulesList());
-        assertTrue(integerAttributes.applyValidationRules(),
+        assertFalse(integerAttributes.applyValidationRules(),
                 "Validation should pass for non-negative integer");
 
         integerAttributes.setValue(-1);
        log.info("Validation rules (non-negative, -1): {}",
                integerAttributes.getValidationRulesList());
-        assertFalse(integerAttributes.applyValidationRules(),
+        assertTrue(integerAttributes.applyValidationRules(),
                 "Validation should fail for negative integer");
     }
 
