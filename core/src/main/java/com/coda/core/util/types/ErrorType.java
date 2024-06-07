@@ -137,6 +137,37 @@ public enum ErrorType {
      * Identify when serialization
      * of class data failed.
      */
-    DATA_DESERIALIZATION_ERROR, ACCESS_DENIED, INVALID_FILE_PATH, UNKNOWN,
+    DATA_DESERIALIZATION_ERROR,
+
+    /**
+     * ACCESS_DENIED.
+     * Identify when access denied
+     * to the data.
+     */
+    ACCESS_DENIED,
+
+    /**
+     * INVALID_FILE_PATH.
+     * Identify when file path is invalid.
+     */
+    INVALID_FILE_PATH,
+
+    /**
+     * UNKNOWN.
+     * Identify when error is unknown.
+     */
+    UNKNOWN,
+
+    /**
+     * DATA_SAVE_ERROR.
+     * Identify when data save failed.
+     */
+    DATA_SAVE_ERROR,
+
+    /**
+     * UNKNOWN_ATTRIBUTE_TYPE.
+     * Identify when attribute type is unknown.
+     */
+    UNKNOWN_ATTRIBUTE_TYPE,
 }
 

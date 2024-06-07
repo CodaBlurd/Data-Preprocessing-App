@@ -8,6 +8,7 @@ import com.coda.core.repository.DataModelRepository;
 import com.coda.core.util.db.DatabaseExtractor;
 import com.coda.core.util.db.DatabaseExtractorFactory;
 import com.coda.core.util.file.FileExtractor;
+import com.coda.core.util.transform.DataTransformation;
 import com.coda.core.util.types.ErrorType;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
@@ -25,10 +26,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Service class for DataModel entity.
@@ -70,24 +71,35 @@ public class DataModelService {
     private final MongoTemplate mongoTemplate;
 
     /**
+     * The DataTransformation object.
+     * This is used to transform
+     * the data from different sources.
+     */
+
+    private final DataTransformation dataTransformation;
+
+    /**
      * Constructor for DataModelService.
      * @param dataModels the DataModelRepository object.
      * @param dbExtractorFactory the DatabaseExtractorFactory object.
      * @param fExtractor the FileExtractor object.
      * @param resLoader the ResourceLoader object.
      * @param template the MongoTemplate object.
+     * @param transformation the DataTransformation object.
      */
     @Autowired
     public DataModelService(final DataModelRepository dataModels,
                             final DatabaseExtractorFactory dbExtractorFactory,
                             final FileExtractor fExtractor,
                             final ResourceLoader resLoader,
-                            final MongoTemplate template) {
+                            final MongoTemplate template,
+                            final DataTransformation transformation) {
         this.dataModelRepository = dataModels;
         this.databaseExtractorFactory = dbExtractorFactory;
         this.fileExtractor = fExtractor;
         this.resourceLoader = resLoader;
         this.mongoTemplate = template;
+        this.dataTransformation = transformation;
     }
 
     //== public methods ==
@@ -199,7 +211,7 @@ public class DataModelService {
                 processAndSaveDataModels(dataModels);
                 return dataModels;
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             log.error("Error while reading data from file", e);
             throw new DataExtractionException(
                     "Error reading from file: "
@@ -324,7 +336,7 @@ public class DataModelService {
 
     private void processAndSaveDataModels(
             final List<DataModel<Object>> dataModels)
-            throws DataExtractionException {
+            throws DataExtractionException, ClassNotFoundException {
         validateDataModels(dataModels);
         Map<String, List<DataAttributes<Object>>> categorizedAttributes
                 = categorizeAttributesByType(dataModels);
@@ -332,32 +344,58 @@ public class DataModelService {
         saveProcessedDataModels(dataModels);
     }
 
-    private void processDocumentDataModels(
-            final Map<String, DataModel<Document>> dataModels)
-            throws DataExtractionException {
-        for (DataModel<Document>
-                dataModel : dataModels.values()) {
+    private void processDocumentDataModels(final Map<String,
+            DataModel<Document>> dataModels)
+            throws DataExtractionException, ClassNotFoundException {
 
+        for (DataModel<Document> dataModel : dataModels.values()) {
             if (dataModel.getAttributesMap() != null) {
-
                 for (DataAttributes<Document> dataAttributes
                         : dataModel.getAttributesMap().values()) {
-                    dataAttributes.transformValue();
+
+                    String type = dataAttributes.getType();
+                    Object value = dataAttributes.getValue();
+                    String typeClazzName = dataAttributes.getTypeClazzName();
+                    String format = dataAttributes.getFormat();
+                    String attributeName = dataAttributes.getAttributeName();
+
+                    // Apply transformations
+                    dataTransformation.transformValue(type, value,
+                            typeClazzName, format, attributeName);
+
+                    dataTransformation.cleanCategoricalValues(type, value,
+                            typeClazzName);
+
+                    // Handle missing values
+                    dataTransformation.replaceMissingCategoricalValues(
+                            List.of(dataAttributes), type);
+
+                    dataTransformation.replaceMissingNumericalValues(
+                            List.of(dataAttributes), dataAttributes);
+
+                    // Normalize data
+                    dataTransformation.normalizeData(
+                            List.of(dataAttributes), dataAttributes);
+
+                    // Apply default values
                     dataAttributes.applyDefaultValue();
-                    if (!dataAttributes.applyValidationRules()) {
-                        log.error("Validation failed "
-                                        + "for attribute with name: {}",
-                                dataAttributes.getAttributeName());
-                        throw new DataExtractionException(
-                                "Validation failed for attribute: "
-                                + dataAttributes.getAttributeName(),
-                                ErrorType.VALIDATION_FAILED);
+
+                    // Validate attributes
+                    if (dataAttributes.applyValidationRules()) {
+                        log.error("Validation failed for attribute with name:"
+                                + " {}", attributeName);
+                        throw new DataExtractionException("Validation failed "
+                                + "for attribute: "
+                                + attributeName, ErrorType.VALIDATION_FAILED);
                     }
+
+                    // Update last updated date
                     dataAttributes.setLastUpdatedDate(Instant.now());
                 }
             }
         }
     }
+
 
     private void validateDataModels(
             final List<DataModel<Object>> dataModels)
@@ -383,8 +421,10 @@ public class DataModelService {
             if (dataModel.getAttributesMap() != null) {
                 for (DataAttributes<Object>
                         attr : dataModel.getAttributesMap().values()) {
-                    categorizeAttribute(categorizedAttributes, attr);
-                    attr.transformValue();
+                    String attributeType = attr.getType();
+
+                    categorizedAttributes.computeIfAbsent(attributeType,
+                            k -> new ArrayList<>()).add(attr);
                 }
             }
         }
@@ -404,55 +444,91 @@ public class DataModelService {
 
     private void processAttributes(final Map<String,
             List<DataAttributes<Object>>> categorizedAttributes)
-            throws DataExtractionException {
-        replaceMissingValues(categorizedAttributes);
-        applyTransformationsAndValidations(categorizedAttributes);
-    }
+            throws DataExtractionException, ClassNotFoundException {
 
-    private void replaceMissingValues(
-            final Map<String, List<DataAttributes<Object>>>
-                                              categorizedAttributes) {
-        List<DataAttributes<Object>> numericalColumns
-                = categorizedAttributes.get("numerical");
-        List<DataAttributes<Object>> categoricalColumns
-                = categorizedAttributes.get("categorical");
-
-        numericalColumns.forEach(column -> {
-            try {
-                column.replaceMissingNumericalValues(numericalColumns);
-            } catch (ClassNotFoundException e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        categoricalColumns.forEach(column ->
-                column.replaceMissingCategoricalValues(categoricalColumns));
-    }
-
-    private void applyTransformationsAndValidations(
-            final Map<String, List<DataAttributes<Object>>>
-                    categorizedAttributes)
-            throws DataExtractionException {
-        for (List<DataAttributes<Object>>
-                attributes : categorizedAttributes.values()) {
-            for (DataAttributes<Object> attr : attributes) {
-                attr.applyDefaultValue();
-                if (!attr.applyValidationRules()) {
-                    log.error("Validation failed for attribute: {}",
-                            attr.getAttributeName());
-                    throw new DataExtractionException("Validation failed "
-                            + "for attribute: "
-                            + attr.getAttributeName(),
-                            ErrorType.VALIDATION_FAILED);
-                }
-                attr.setLastUpdatedDate(Instant.now());
+        for (Map.Entry<String, List<DataAttributes<Object>>>
+                entry : categorizedAttributes.entrySet()) {
+            String attributeType = entry.getKey();
+            List<DataAttributes<Object>> attributes = entry.getValue();
+            switch (attributeType) {
+                case "numerical":
+                    processNumericAttributes(attributes);
+                    break;
+                case "categorical":
+                    processCategoricalAttributes(attributes);
+                    break;
+                default:
+                    log.error("Unknown attribute type: {}", attributeType);
+                    throw new DataExtractionException("Unknown attribute type: "
+                            + attributeType, ErrorType.UNKNOWN_ATTRIBUTE_TYPE);
             }
         }
     }
 
+    private void processNumericAttributes(
+            final List<DataAttributes<Object>> attributes)
+            throws DataExtractionException, ClassNotFoundException {
+
+        for (DataAttributes<Object> dataAttributes : attributes) {
+            dataTransformation.replaceMissingNumericalValues(
+                    List.of(dataAttributes), dataAttributes);
+            dataTransformation.normalizeData(
+                    List.of(dataAttributes), dataAttributes);
+
+            if (dataAttributes.applyValidationRules()) {
+                log.error("Validation failed for numeric "
+                                + "attribute with name: {}",
+                        dataAttributes.getAttributeName());
+
+                throw new DataExtractionException("Validation failed for "
+                        + "numeric attribute: "
+                        + dataAttributes.getAttributeName(),
+                        ErrorType.VALIDATION_FAILED);
+            }
+            dataAttributes.setLastUpdatedDate(Instant.now());
+        }
+    }
+
+    private void processCategoricalAttributes(
+            final List<DataAttributes<Object>> attributes)
+            throws DataExtractionException, ClassNotFoundException {
+
+        for (DataAttributes<Object> dataAttributes : attributes) {
+            String type = dataAttributes.getType();
+            Object value = dataAttributes.getValue();
+            String typeClazzName = dataAttributes.getTypeClazzName();
+
+            dataTransformation.cleanCategoricalValues(type,
+                    value, typeClazzName);
+            dataTransformation.replaceMissingCategoricalValues(
+                    List.of(dataAttributes), type);
+            dataTransformation.encodeCategoricalData(
+                    List.of(dataAttributes));
+
+            if (dataAttributes.applyValidationRules()) {
+                log.error("Validation failed for categorical"
+                                + " attribute with name: {}",
+                        dataAttributes.getAttributeName());
+                throw new DataExtractionException("Validation failed for "
+                        + "categorical attribute: "
+                        + dataAttributes.getAttributeName(),
+                        ErrorType.VALIDATION_FAILED);
+            }
+            dataAttributes.setLastUpdatedDate(Instant.now());
+        }
+    }
+
+
     private void saveProcessedDataModels(
-            final List<DataModel<Object>> dataModels) {
-        dataModelRepository.saveAll(dataModels);
+            final List<DataModel<Object>> dataModels)
+            throws DataExtractionException {
+        try {
+            dataModelRepository.saveAll(dataModels);
+        } catch (Exception e) {
+            log.error("Error saving data models to repository", e);
+            throw new DataExtractionException("Error saving data models: "
+                    + e.getMessage(), ErrorType.DATA_SAVE_ERROR);
+        }
     }
 
 }
