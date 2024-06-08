@@ -301,6 +301,50 @@ public class DataTransformation {
         return encodedValues;
     }
 
+    /**
+     * removeOutliers().
+     * This method handles outliers in the data.
+     * It removes outliers from the data.
+     * @param column The list of data attributes of the column.
+     * @param <T> The type of the value in the data attribute.
+     *
+     */
+
+    public <T extends Number> void removeOutliers(
+            final List<DataAttributes<T>> column) {
+
+        //constants for quartile calculations.
+        final int firstQuartileFactor = 4;
+        final int thirdQuartileFactor = 3;
+        final double outlierThresholdFactor = 1.5;
+        // Convert column values to a list of doubles and sort
+        List<Double> values = column.stream()
+                .map(attr -> attr.getValue().doubleValue())
+                .sorted()
+                .toList();
+
+        // Calculate Q1 and Q3
+        double q1 = values.get(values.size() / firstQuartileFactor);
+        double q3 = values.get(values.size()
+                / firstQuartileFactor * thirdQuartileFactor);
+
+        // Calculate the inter-quartile range (IQR)
+
+        double iqr = q3 - q1;
+
+        // Define the outlier thresholds
+        double lowerThreshold = q1 - outlierThresholdFactor * iqr;
+        double upperThreshold = q3 + outlierThresholdFactor * iqr;
+
+        // Remove outliers from the column
+        column.removeIf(attr -> {
+            double value = attr.getValue().doubleValue();
+            return value < lowerThreshold || value > upperThreshold;
+        });
+    }
+
+
+
 
 
 }

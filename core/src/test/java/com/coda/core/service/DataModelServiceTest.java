@@ -7,7 +7,7 @@ import com.coda.core.repository.DataModelRepository;
 import com.coda.core.util.db.DatabaseExtractor;
 import com.coda.core.util.db.DatabaseExtractorFactory;
 import com.coda.core.util.file.FileExtractor;
-import com.coda.core.util.file.FileExtractorImpl;
+import com.coda.core.util.transform.DataTransformation;
 import org.bson.Document;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,15 +15,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.verification.VerificationMode;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -53,6 +54,10 @@ public class DataModelServiceTest {
 
     @Mock
     ResourceLoader resourceLoader;
+
+    @Mock
+    private DataTransformation dataTransformation;
+
 
     @InjectMocks
     private DataModelService dataModelService;

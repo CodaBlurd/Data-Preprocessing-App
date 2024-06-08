@@ -26,10 +26,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.List;
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Service class for DataModel entity.
@@ -370,12 +370,22 @@ public class DataModelService {
                     dataTransformation.replaceMissingCategoricalValues(
                             List.of(dataAttributes), type);
 
+                    //remove outliers
+                    List<DataAttributes<Number>> numberAttributes
+                            = convertToNumberAttributes(
+                                    List.of(dataAttributes));
+                    dataTransformation.removeOutliers(numberAttributes);
+
+
                     dataTransformation.replaceMissingNumericalValues(
-                            List.of(dataAttributes), dataAttributes);
+                            List.of(dataAttributes),
+                            dataAttributes);
 
                     // Normalize data
-                    dataTransformation.normalizeData(
-                            List.of(dataAttributes), dataAttributes);
+                    dataTransformation
+                            .normalizeData(List.of(dataAttributes),
+                            dataAttributes);
+
 
                     // Apply default values
                     dataAttributes.applyDefaultValue();
@@ -395,6 +405,34 @@ public class DataModelService {
             }
         }
     }
+
+    // private method to convert List<DataAttributes<Object>>
+    // to list of DataAttributes<Number>
+
+    private List<DataAttributes<Number>> convertToNumberAttributes(
+            final List<DataAttributes<Document>> attributes) {
+
+        List<DataAttributes<Number>> numberAttributes = new ArrayList<>();
+        for (DataAttributes<Document> attribute : attributes) {
+            Document document = attribute.getValue();
+            if (document != null) {
+                // Assuming the Document contains a single Number value
+                Number numberValue = document.get("value", Number.class);
+                if (numberValue != null) {
+                    DataAttributes<Number> numberAttribute
+                            = new DataAttributes<>(
+                            attribute.getAttributeName(),
+                            numberValue,  // Extracted Number value
+                            attribute.getType(),
+                            Number.class);
+                    numberAttributes.add(numberAttribute);
+                }
+            }
+        }
+        return numberAttributes;
+    }
+
+
 
 
     private void validateDataModels(
@@ -431,17 +469,6 @@ public class DataModelService {
         return categorizedAttributes;
     }
 
-    private void categorizeAttribute(final Map<String,
-            List<DataAttributes<Object>>> categorizedAttributes,
-                                     final DataAttributes<Object> attr) {
-        if ("Integer".equals(attr.getType())
-                || "Double".equals(attr.getType())) {
-            categorizedAttributes.get("numerical").add(attr);
-        } else if ("String".equals(attr.getType())) {
-            categorizedAttributes.get("categorical").add(attr);
-        }
-    }
-
     private void processAttributes(final Map<String,
             List<DataAttributes<Object>>> categorizedAttributes)
             throws DataExtractionException, ClassNotFoundException {
@@ -468,6 +495,19 @@ public class DataModelService {
     private void processNumericAttributes(
             final List<DataAttributes<Object>> attributes)
             throws DataExtractionException, ClassNotFoundException {
+
+        List<DataAttributes<Number>> numericAttributes
+                = attributes.stream()
+                .filter(attr -> attr.getValue() instanceof  Number)
+                .map(attr -> new DataAttributes<>(
+                                attr.getAttributeName(),
+                                attr.getValue(),
+                                attr.getType(),
+                                Number.class))
+                .toList();
+        // handle outlier.
+        dataTransformation.removeOutliers(numericAttributes);
+
 
         for (DataAttributes<Object> dataAttributes : attributes) {
             dataTransformation.replaceMissingNumericalValues(
@@ -519,8 +559,8 @@ public class DataModelService {
     }
 
 
-    private void saveProcessedDataModels(
-            final List<DataModel<Object>> dataModels)
+    private void saveProcessedDataModels(final List<DataModel<Object>>
+                                                 dataModels)
             throws DataExtractionException {
         try {
             dataModelRepository.saveAll(dataModels);

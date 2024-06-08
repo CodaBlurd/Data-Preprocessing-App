@@ -213,6 +213,34 @@ public void testReplaceMissingNumericalValues_NumberType_NoMissingValues()
 
     }
 
+    @Test
+    public void testRemoveOutliers() {
+        // Create a list of DataAttributes with some outlier values
+        List<DataAttributes<Double>> column = new ArrayList<>();
+        column.add(new DataAttributes<>("Height",
+                175.0, "Double", Double.class));
+        column.add(new DataAttributes<>("Height",
+                180.0, "Double", Double.class));
+        column.add(new DataAttributes<>("Height",
+                185.0, "Double", Double.class));
+        column.add(new DataAttributes<>("Height",
+                190.0, "Double", Double.class));
+        column.add(new DataAttributes<>("Height",
+                300.0, "Double", Double.class)); // Outlier
+        column.add(new DataAttributes<>("Height",
+                -100.0, "Double", Double.class)); // Outlier
+
+        // Call removeOutliers
+        dataTransformation.removeOutliers(column);
+
+        // Check that the outliers have been removed
+        assertEquals(4, column.size());
+        for (DataAttributes<Double> attr : column) {
+            double value = attr.getValue();
+            assert (value >= 175.0 && value <= 190.0);
+        }
+    }
+
 
 
 
