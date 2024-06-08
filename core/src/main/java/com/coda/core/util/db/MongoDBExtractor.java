@@ -1,11 +1,15 @@
 package com.coda.core.util.db;
 
+import com.coda.core.config.MongoDBConfig;
+import com.coda.core.config.MongoDBProperties;
 import com.coda.core.entities.DataAttributes;
 import com.coda.core.entities.DataModel;
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -34,15 +38,25 @@ public final class MongoDBExtractor implements DatabaseExtractor {
     private final MongoDBConnectionFactory mongoDBConnectionFactory;
 
     /**
+     * The MongoConfig object.
+     */
+    private final MongoDBConfig mongoDBConfig;
+
+    /**
      * This constructor initializes the mongoDBConnectionFactory field
      * with the value provided.
      * @param mongoConnectFactory The MongoDBConnectionFactory object
+     * @param config The MongoDBConfig object
+     * @see MongoDBConnectionFactory
+     * @see MongoDBConfig
      */
 
     @Autowired
     public MongoDBExtractor(
-            final MongoDBConnectionFactory mongoConnectFactory) {
+            @Lazy final MongoDBConnectionFactory mongoConnectFactory,
+            final MongoDBConfig config) {
         this.mongoDBConnectionFactory = mongoConnectFactory;
+        this.mongoDBConfig = config;
     }
 
     /**
@@ -64,8 +78,15 @@ public final class MongoDBExtractor implements DatabaseExtractor {
             throw new IllegalArgumentException("Invalid arguments");
         }
 
+        MongoClient mongoClient = mongoDBConfig.mongoClient();
+
+        MongoDBProperties tempProperties = new MongoDBProperties();
+        tempProperties.setUrl(url);
+
         MongoDatabase mongoDatabase
-                = mongoDBConnectionFactory.getConnection(databaseName);
+                = mongoDBConnectionFactory
+                .getConnection(mongoClient, databaseName);
+
         MongoCollection<Document> collection
                 = mongoDatabase.getCollection(tableName);
 
@@ -97,9 +118,7 @@ public final class MongoDBExtractor implements DatabaseExtractor {
     */
     @Override
     public List<DataModel<Object>> readData(
-            final String tableName, final String url,
-            final String user, final String password)
-            throws Exception {
+            final String tableName) {
         return Collections.emptyList();
     }
 }

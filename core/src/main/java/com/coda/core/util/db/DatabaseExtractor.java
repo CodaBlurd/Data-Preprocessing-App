@@ -25,15 +25,11 @@ public interface DatabaseExtractor {
      from a relational database.
      </p>
      * @param tableName The name of the table to be extracted.
-     * @param url The url of the database.
-     * @param user The username of the database.
-     * @param password The password of the database.
      * @return A list of DataModel objects.
      * @throws Exception if the table name is invalid.
      */
 
-    List<DataModel<Object>> readData(String tableName,
-     String url, String user, String password) throws Exception;
+    List<DataModel<Object>> readData(String tableName) throws Exception;
 
     /**
     <p>

@@ -2,7 +2,9 @@ package com.coda.core.util.db;
 
 import com.coda.core.codec.DataAttributesCodec;
 import com.coda.core.codec.DataModelCodec;
+import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
+import com.mongodb.MongoCredential;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import org.bson.codecs.configuration.CodecRegistries;
@@ -21,10 +23,15 @@ public final class MongoDBUtil {
      * createMongoClient method.
      * is used to create a MongoClient instance.
      * it's subClasses where applicable.
+     * @param url The url of the database.
+     * @param username The username of the database.
+     * @param password The password of the database.
      * @return MongoClient object.
      */
 
-    public static MongoClient createMongoClient() {
+    public static MongoClient createMongoClient(final String url,
+                                                final String username,
+                                                final String password) {
         CodecRegistry defaultRegistry
                 = MongoClientSettings.getDefaultCodecRegistry();
 
@@ -38,6 +45,9 @@ public final class MongoDBUtil {
         );
 
         MongoClientSettings settings = MongoClientSettings.builder()
+                .applyConnectionString(new ConnectionString(url))
+                .credential(MongoCredential.createCredential(username,
+                        "admin", password.toCharArray()))
                 .codecRegistry(codecRegistry)
                 .build();
 
