@@ -1,11 +1,11 @@
 package com.coda.core.util.db;
 
+import com.coda.core.config.MongoDBProperties;
 import com.coda.core.exceptions.ReadFromDbExceptions;
 import com.coda.core.util.types.ErrorType;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
@@ -24,58 +24,47 @@ public final class MongoDBConnectionFactory {
     private final MongoClient mongoClient;
 
     /**
-     * The connection URL of the database.
-     * This is used to connect to the database.
+     * The MongoDBProperties object used to configure the connection.
+     * The MongoDBProperties object contains the database name,
+     * the host name, and url
+     * of the database.
+     * @see MongoDBProperties
      */
 
-    private final String connectionUrl;
+    private final MongoDBProperties mongoDBProperties;
 
     /**
      * <p>This constructor is used to
      * create a connection to the MongoDB database.
      * </p>
      * @param client The MongoClient bean.
-     * @param url The connection URL of the database.
+     * @param properties The MongoDBProperties bean.
      */
     @Autowired
     public MongoDBConnectionFactory(final MongoClient client,
-                                    @Value("${spring.data.mongodb.uri}")
-                                    final String url) {
+                                    final MongoDBProperties properties) {
         this.mongoClient = client;
-        this.connectionUrl = url;
+        this.mongoDBProperties = properties;
     }
 
     /**
      * This method is used to create a connection to the MongoDB database.
+     * @param client The MongoClient object
      * @param dbName The name of the database
      * @return A connection to the database
      * @throws ReadFromDbExceptions if the connection fails
      */
-    public MongoDatabase getConnection(final String dbName) {
-        if (mongoClient == null) {
-            throw new ReadFromDbExceptions("Failed to connect to database",
-                    ErrorType.DB_NOT_FOUND);
+    public MongoDatabase getConnection(final MongoClient client,
+                                       final String dbName) {
+
+        if (client == null) {
+            throw new ReadFromDbExceptions("Failed to connect "
+                    + "to database", ErrorType.DB_NOT_FOUND);
         } else if (dbName == null || dbName.isEmpty()) {
             throw new IllegalArgumentException("Invalid database name");
         }
-        return mongoClient.getDatabase(dbName);
-    }
 
-    /**
-     * This method is used to get the MongoClient object.
-     * @return The MongoClient object.
-     */
-    public MongoClient getMongoClient() {
-        return mongoClient;
-    }
-
-    /**
-     * This method is used to get the connection URL.
-     * @return The connection URL string.
-     */
-
-    public String getConnectionUrl() {
-        return connectionUrl;
+        return client.getDatabase(dbName);
     }
 
     /**

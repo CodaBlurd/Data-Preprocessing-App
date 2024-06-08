@@ -1,6 +1,9 @@
 package com.coda.core.util.db;
 
+import com.coda.core.config.MySQLProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -18,7 +21,26 @@ import java.sql.DriverManager;
  */
 
 @Slf4j
+@Component
 public class SqlDbConnectionFactory implements ConnectionFactory {
+
+    /**
+     * This field stores the MySQLProperties object.
+     * The MySqlProperties class is used to store
+     * the database connection details.
+     * @see MySQLProperties
+     */
+    private final MySQLProperties mySQLProperties;
+
+    /**
+     * This constructor initializes the mySQLProperties field
+     * with the value provided.
+     * @param properties The MySQLProperties object
+     */
+    @Autowired
+    public SqlDbConnectionFactory(final MySQLProperties properties) {
+        this.mySQLProperties = properties;
+    }
 
     // Load the MySQL driver class
         static {
@@ -50,4 +72,19 @@ public class SqlDbConnectionFactory implements ConnectionFactory {
             return DriverManager.getConnection(url, user, password);
 
         }
+
+    /**
+     * This method is used to create a connection to a MySQL database.
+     * connectToMySQL is a method that creates a connection
+     *  to a MySQL database.
+     * @return A connection to the MySQL database
+     * @throws Exception if the connection fails
+     */
+
+    @Override
+    public Connection connectToMySQL() throws Exception {
+        return connect(mySQLProperties.getUrl(),
+                mySQLProperties.getUsername(),
+                mySQLProperties.getPassword());
     }
+}

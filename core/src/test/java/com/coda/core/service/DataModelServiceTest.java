@@ -85,15 +85,15 @@ public class DataModelServiceTest {
 
         List<DataModel<Object>> expectedDataModels = new ArrayList<>();
 
-        when(databaseExtractor.readData(tableName, url, user, password)).thenReturn(expectedDataModels);
+        when(databaseExtractor.readData(tableName)).thenReturn(expectedDataModels);
 
         // Act
-        List<DataModel<Object>> actualDataModels = dataModelService.extractDataFromTable(type, tableName, url, user, password);
+        List<DataModel<Object>> actualDataModels = dataModelService.extractDataFromTable(type, tableName);
 
         // Assert
         assertEquals(expectedDataModels, actualDataModels);
         verify(databaseExtractorFactory).getExtractor(type);
-        verify(databaseExtractor).readData(tableName, url, user, password);
+        verify(databaseExtractor).readData(tableName);
     }
 
     @Test

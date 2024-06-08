@@ -111,26 +111,22 @@ public class DataModelService {
      * @param tableName The name of the table to read from
      * @param type The type of the database
      *  The table name must be a valid table name
-     * @param url The url of the database
-     * @param user The username of the database
-     * @param password The password of the database
      * @return A list of DataModel objects
      * @throws ReadFromDbExceptions if the table name is invalid
      */
 
     @Transactional(rollbackFor = ReadFromDbExceptions.class)
     public List<DataModel<Object>> extractDataFromTable(
-            final String type, final String tableName,
-     final String url, final String user, final String password)
+            final String type, final String tableName)
             throws ReadFromDbExceptions {
 
-        validateDatabaseArguments(type, tableName, url, user, password);
+        validateDatabaseArguments(type, tableName);
 
         try {
             DatabaseExtractor databaseExtractor
                     = databaseExtractorFactory.getExtractor(type);
             List<DataModel<Object>> dataModels = databaseExtractor
-                    .readData(tableName, url, user, password);
+                    .readData(tableName);
             processAndSaveDataModels(dataModels);
             return dataModels;
 
@@ -295,6 +291,8 @@ public class DataModelService {
                     ErrorType.FILE_NOT_WRITABLE);
         }
     }
+
+
 
 
 

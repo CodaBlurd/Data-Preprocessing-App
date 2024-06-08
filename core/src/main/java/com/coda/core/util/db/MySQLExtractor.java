@@ -9,10 +9,10 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,23 +30,27 @@ public final class MySQLExtractor implements DatabaseExtractor {
      * The connection factory to be used to connect to the database.
      * <p> The connection factory to be used to connect to the database.</p>
      */
-    private final ConnectionFactory connectionFactory
-            = new SqlDbConnectionFactory();
+    private ConnectionFactory connectionFactory;
+
+    /**
+     * setConnectionFactory().
+     * @param connectionObject the connection
+     * factory object.
+     */
+    public void setConnectionFactory(final ConnectionFactory connectionObject) {
+        this.connectionFactory = connectionObject;
+    }
 
     /**
      * This method is used to extract data from a mysql type database.
      * @param tableName The name of the table to be extracted.
-     * @param url The url of the database.
-     * @param user The username of the database.
-     * @param password The password of the database.
      * @return A list of DataModel objects.
      * @throws Exception if the table name is invalid.
      */
 
     @Override
     public List<DataModel<Object>> readData(
-            final String tableName, final String url,
-            final String user, final String password) throws Exception {
+            final String tableName) throws Exception {
         // Validate or sanitize tableName to ensure it's safe to use in a query
         if (!isTableNameValid(tableName)) {
             throw new IllegalArgumentException("Invalid table name");
@@ -55,7 +59,7 @@ public final class MySQLExtractor implements DatabaseExtractor {
         String query = String.format(Queries.READ_FROM_MYSQL, tableName);
 
         try (Connection connection
-                     = connectionFactory.connect(url, user, password);
+                     = connectionFactory.connectToMySQL();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 

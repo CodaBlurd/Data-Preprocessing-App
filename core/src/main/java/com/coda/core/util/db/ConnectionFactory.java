@@ -29,5 +29,12 @@ public interface ConnectionFactory {
             String url, String user,
             String password)
             throws Exception;
+
+    /**
+     * This method establishes a connection to a mysql db.
+     * @return Connection object.
+     * @throws Exception if the connection fails.
+     */
+    Connection connectToMySQL() throws Exception;
 }
 

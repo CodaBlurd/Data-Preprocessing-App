@@ -1,7 +1,6 @@
 package com.coda.core.util.db;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 /**
@@ -19,18 +18,40 @@ import org.springframework.stereotype.Component;
 public class DatabaseExtractorFactory {
 
     /**
-     * The application context.
+     * The SQL connection factory.
      */
-    private final ApplicationContext applicationContext;
+
+    private final ConnectionFactory connectionFactory;
+
+    /**
+     * The MySqlExtractor.
+     */
+
+    private final MySQLExtractor mySQLExtractor;
+
+
+    /**
+     * The MongoDbExtractor.
+     */
+    private final MongoDBExtractor mongoDBExtractor;
 
     /**
      * The constructor.
-     * @param appContext The application context.
+     * @param connection The connection factory.
+     * @param sqlExtractor The mysql extractor.
+     * @param noSqlExtractor The mongodb extractor.
+     * @see MySQLExtractor
+     * @see MongoDBExtractor
+     * @see ConnectionFactory
      */
 
     @Autowired
-    public DatabaseExtractorFactory(final ApplicationContext appContext) {
-        this.applicationContext = appContext;
+    public DatabaseExtractorFactory(final ConnectionFactory connection,
+                                    final MySQLExtractor sqlExtractor,
+                                    final MongoDBExtractor noSqlExtractor) {
+        this.connectionFactory = connection;
+        this.mySQLExtractor = sqlExtractor;
+        this.mongoDBExtractor = noSqlExtractor;
     }
 
     /**
@@ -42,15 +63,16 @@ public class DatabaseExtractorFactory {
      */
 
     public DatabaseExtractor getExtractor(final String databaseType) {
-        switch (databaseType) {
-            case DatabaseNames.MYSQL:
-                return new MySQLExtractor();
-            case DatabaseNames.MONGODB:
-                return applicationContext.getBean(MongoDBExtractor.class);
+        return switch (databaseType) {
+            case DatabaseNames.MYSQL -> {
+                mySQLExtractor
+                        .setConnectionFactory(connectionFactory);
+                yield mySQLExtractor;
+            }
+            case DatabaseNames.MONGODB -> mongoDBExtractor;
             // other database types will be added here
-            default:
-                throw new IllegalArgumentException(
-                        "Unsupported database type: " + databaseType);
-        }
+            default -> throw new IllegalArgumentException(
+                    "Unsupported database type: " + databaseType);
+        };
     }
 }
