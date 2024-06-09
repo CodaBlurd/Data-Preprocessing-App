@@ -3,6 +3,7 @@ package com.coda.core.config;
 import com.coda.core.util.db.MongoDBConnectionFactory;
 import com.coda.core.util.db.MongoDBExtractor;
 import com.coda.core.util.db.MySQLExtractor;
+import com.coda.core.util.timestamps.FileTimestampStorage;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -29,6 +30,7 @@ public class DatabaseExtractorConfig {
      * @param mongoDBConnectionFactory The connection factory
      *  used to connect to the database
      * @param config The configuration for the database
+     * @param fts The timestamp storage
      * @return MongoDBExtractor
      */
 
@@ -36,9 +38,9 @@ public class DatabaseExtractorConfig {
     @Lazy
     public MongoDBExtractor mongoDBExtractor(
             final MongoDBConnectionFactory mongoDBConnectionFactory,
-            final MongoDBConfig config) {
+            final MongoDBConfig config, final FileTimestampStorage fts) {
 
-        return new MongoDBExtractor(mongoDBConnectionFactory, config);
+        return new MongoDBExtractor(mongoDBConnectionFactory, config, fts);
     }
 
     // more db config

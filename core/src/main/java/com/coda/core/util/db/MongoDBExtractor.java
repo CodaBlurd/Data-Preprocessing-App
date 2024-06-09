@@ -4,14 +4,18 @@ import com.coda.core.config.MongoDBConfig;
 import com.coda.core.config.MongoDBProperties;
 import com.coda.core.entities.DataAttributes;
 import com.coda.core.entities.DataModel;
+import com.coda.core.util.timestamps.FileTimestampStorage;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -43,10 +47,16 @@ public final class MongoDBExtractor implements DatabaseExtractor {
     private final MongoDBConfig mongoDBConfig;
 
     /**
+     * The FileTimestampStorage object.
+     */
+    private final FileTimestampStorage fileTimestampStorage;
+
+    /**
      * This constructor initializes the mongoDBConnectionFactory field
      * with the value provided.
      * @param mongoConnectFactory The MongoDBConnectionFactory object
      * @param config The MongoDBConfig object
+     * @param fts The FileTimestampStorage object
      * @see MongoDBConnectionFactory
      * @see MongoDBConfig
      */
@@ -54,9 +64,10 @@ public final class MongoDBExtractor implements DatabaseExtractor {
     @Autowired
     public MongoDBExtractor(
             @Lazy final MongoDBConnectionFactory mongoConnectFactory,
-            final MongoDBConfig config) {
+            final MongoDBConfig config, final FileTimestampStorage fts) {
         this.mongoDBConnectionFactory = mongoConnectFactory;
         this.mongoDBConfig = config;
+        this.fileTimestampStorage = fts;
     }
 
     /**
@@ -78,38 +89,53 @@ public final class MongoDBExtractor implements DatabaseExtractor {
             throw new IllegalArgumentException("Invalid arguments");
         }
 
-        MongoClient mongoClient = mongoDBConfig.mongoClient();
+        MongoClient mongoClient = null;
 
-        MongoDBProperties tempProperties = new MongoDBProperties();
-        tempProperties.setUrl(url);
+        try {
 
-        MongoDatabase mongoDatabase
-                = mongoDBConnectionFactory
-                .getConnection(mongoClient, databaseName);
+            mongoClient = mongoDBConfig.mongoClient();
 
-        MongoCollection<Document> collection
-                = mongoDatabase.getCollection(tableName);
+            MongoDBProperties tempProperties = new MongoDBProperties();
+            tempProperties.setUrl(url);
 
-        Map<String, DataModel<Document>> dataModelList = new HashMap<>();
+            MongoDatabase mongoDatabase
+                    = mongoDBConnectionFactory
+                    .getConnection(mongoClient, databaseName);
 
-        for (Document document : collection.find()) {
-            DataModel<Document> dataModel = new DataModel<>();
-            Map<String, DataAttributes<Document>> attributes
-                    = new HashMap<>();
-            for (String key : document.keySet()) {
-                DataAttributes<Document> attribute
-                        = new DataAttributes<>(
-                                key, document.get(key),
-                        "Document",
-                        Document.class);
-                attributes.put(key, attribute);
+            MongoCollection<Document> collection
+                    = mongoDatabase.getCollection(tableName);
+
+            Map<String, DataModel<Document>> dataModelList = new HashMap<>();
+
+            Instant lastExtractedTimeStamp = fileTimestampStorage
+                    .getLastExtractedTimestamp();
+
+            // Filters.gt
+
+            Bson filter = Filters.gt("updatedAt", lastExtractedTimeStamp);
+
+            for (Document document : collection.find(filter)) {
+                DataModel<Document> dataModel = new DataModel<>();
+                Map<String, DataAttributes<Document>> attributes
+                        = new HashMap<>();
+                for (String key : document.keySet()) {
+                    DataAttributes<Document> attribute
+                            = new DataAttributes<>(
+                            key, document.get(key),
+                            "Document",
+                            Document.class);
+                    attributes.put(key, attribute);
+                }
+                dataModel.setAttributesMap(attributes);
+                dataModelList.put(document.get("_id").toString(), dataModel);
             }
-            dataModel.setAttributesMap(attributes);
-            dataModelList.put(document.get("_id").toString(), dataModel);
+            fileTimestampStorage.updateLastExtractedTimestamp(Instant.now());
+            return dataModelList;
+        } finally {
+            if (mongoClient != null) {
+                mongoDBConnectionFactory.close();
+            }
         }
-
-        mongoDBConnectionFactory.close();
-        return dataModelList;
     }
 
     /*
