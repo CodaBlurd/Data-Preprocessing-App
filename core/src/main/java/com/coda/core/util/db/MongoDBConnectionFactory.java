@@ -21,7 +21,7 @@ public final class MongoDBConnectionFactory {
     /**
      * The MongoClient object used to connect to the database.
      */
-    private final MongoClient mongoClient;
+    private MongoClient mongoClient;
 
     /**
      * The MongoDBProperties object used to configure the connection.
@@ -37,13 +37,10 @@ public final class MongoDBConnectionFactory {
      * <p>This constructor is used to
      * create a connection to the MongoDB database.
      * </p>
-     * @param client The MongoClient bean.
      * @param properties The MongoDBProperties bean.
      */
     @Autowired
-    public MongoDBConnectionFactory(final MongoClient client,
-                                    final MongoDBProperties properties) {
-        this.mongoClient = client;
+    public MongoDBConnectionFactory(final MongoDBProperties properties) {
         this.mongoDBProperties = properties;
     }
 
@@ -74,6 +71,7 @@ public final class MongoDBConnectionFactory {
     public void close() {
         if (mongoClient != null) {
             mongoClient.close();
+            mongoClient = null;
         }
     }
 }

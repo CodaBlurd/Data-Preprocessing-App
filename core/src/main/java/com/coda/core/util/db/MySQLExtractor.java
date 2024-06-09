@@ -96,8 +96,6 @@ public final class MySQLExtractor implements DatabaseExtractor {
                 dataModels.add(dataModel);
             }
 
-
-
             return dataModels;
         } catch (SQLException e) {
             log.error("Error while reading data from database", e);

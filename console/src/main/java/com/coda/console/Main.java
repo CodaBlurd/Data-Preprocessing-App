@@ -2,10 +2,12 @@ package com.coda.console;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.mongodb.config.EnableMongoAuditing;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 @SpringBootApplication(scanBasePackages = {"com.coda.core", "com.coda.console"})
 @EnableMongoRepositories(basePackages = "com.coda.core.repository")
+@EnableMongoAuditing
 public class Main {
 
     /**
