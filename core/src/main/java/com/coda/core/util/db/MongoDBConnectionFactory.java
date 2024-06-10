@@ -38,10 +38,13 @@ public final class MongoDBConnectionFactory {
      * create a connection to the MongoDB database.
      * </p>
      * @param properties The MongoDBProperties bean.
+     * @param client The MongoClient bean.
      */
     @Autowired
-    public MongoDBConnectionFactory(final MongoDBProperties properties) {
+    public MongoDBConnectionFactory(final MongoDBProperties properties,
+                                    final MongoClient client) {
         this.mongoDBProperties = properties;
+        this.mongoClient = client;
     }
 
     /**
