@@ -1,4 +1,4 @@
-package com.coda.core.util;
+package com.coda.core.util.transform;
 
 import com.coda.core.entities.DataAttributes;
 import com.coda.core.exceptions.TransformationException;

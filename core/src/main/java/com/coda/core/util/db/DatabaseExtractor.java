@@ -44,6 +44,30 @@ public interface DatabaseExtractor {
     Map<String, DataModel<Document>> readData(String databaseName,
       String tableName, String url);
 
+    /**
+     * loadData().
+     * This method loads data to  the database.
+     * @param dataModels A list of DataModel objects.
+     * @param tableName The name of the table to be loaded.
+     * @throws Exception if the data is invalid.
+     */
+
+    void loadData(List<DataModel<Object>> dataModels, String tableName)
+            throws Exception;
+
+    /**
+     * loadData().
+     * This method loads data to  the database.
+     * @param dataModels A map of DataModel documents.
+     * @param dbName The name of the database.
+     * @param tableName The name of the table to be loaded.
+     * @param url The url of the database.
+     * @throws Exception if the data is invalid.
+     */
+
+    void loadData(Map<String, DataModel<Document>> dataModels,
+                  String dbName, String tableName, String url) throws Exception;
+
 
 
 }

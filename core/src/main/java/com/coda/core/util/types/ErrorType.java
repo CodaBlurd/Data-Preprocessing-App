@@ -168,6 +168,6 @@ public enum ErrorType {
      * UNKNOWN_ATTRIBUTE_TYPE.
      * Identify when attribute type is unknown.
      */
-    UNKNOWN_ATTRIBUTE_TYPE,
+    UNKNOWN_ATTRIBUTE_TYPE, DATA_LOADING_EXCEPTION,
 }
 
