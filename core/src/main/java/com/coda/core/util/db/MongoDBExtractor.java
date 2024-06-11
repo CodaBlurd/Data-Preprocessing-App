@@ -199,9 +199,7 @@ public final class MongoDBExtractor implements DatabaseExtractor {
             log.error("Error while loading data", e);
             throw new DataLoadingException("Error while loading data",
                     ErrorType.DATA_LOADING_EXCEPTION);
-        }
-
-        finally {
+        } finally {
             if (mongoClient != null) {
                 mongoDBConnectionFactory.close();
             }
