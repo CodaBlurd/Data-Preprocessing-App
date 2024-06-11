@@ -2,6 +2,7 @@ package com.coda.core.util.db;
 
 import com.coda.core.entities.DataAttributes;
 import com.coda.core.entities.DataModel;
+import com.coda.core.exceptions.DataLoadingException;
 import com.coda.core.exceptions.ReadFromDbExceptions;
 import com.coda.core.util.types.ErrorType;
 import lombok.extern.slf4j.Slf4j;
@@ -9,9 +10,9 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -120,14 +121,13 @@ public final class MySQLExtractor implements DatabaseExtractor {
     public void loadData(final List<DataModel<Object>> dataModels,
                          final String tableName) throws Exception {
         if (dataModels == null || dataModels.isEmpty()) {
-            throw new IllegalArgumentException("dataModels"
-                    + " cannot be null or empty");
+            throw new IllegalArgumentException("dataModels cannot "
+                    + "be null or empty");
         }
 
         String insertSQL = buildInsertSQL(dataModels.get(0), tableName);
 
-        try (Connection connection
-                     = connectionFactory.connectToMySQL();
+        try (Connection connection = connectionFactory.connectToMySQL();
              PreparedStatement preparedStatement
                      = connection.prepareStatement(insertSQL)) {
 
@@ -142,18 +142,18 @@ public final class MySQLExtractor implements DatabaseExtractor {
             }
 
             int[] updateCounts = preparedStatement.executeBatch();
-            if (updateCounts == null) {
-                log.error("executeBatch returned null for table {}", tableName);
-            } else {
-                log.info("Inserted {} records into {}",
-                        updateCounts.length, tableName);
-            }
+            log.info("Inserted {} records into {}",
+                    updateCounts.length, tableName);
 
         } catch (SQLException e) {
-            log.error("Error while loading data into database", e);
-            throw e;
+            log.error("Error while loading data into"
+                    + " database {}", e.getMessage());
+            throw new DataLoadingException("Error while loading data"
+                    + " into database: "
+                    + e, ErrorType.DATA_LOADING_EXCEPTION);
         }
     }
+
 
 
     private String buildInsertSQL(final DataModel<Object> dataModel,

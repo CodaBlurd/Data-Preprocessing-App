@@ -268,11 +268,11 @@ public class DataTransformation {
      * encodeCategoricalData encodes categorical data.
      * maps, where each map represents a category
      * and its corresponding value.
+     *
      * @param column The list of data attributes of the column.
-     * @return A list of encoded categorical data.
      */
 
-    public List<Map<String, Integer>> encodeCategoricalData(
+    public void encodeCategoricalData(
             final List<DataAttributes<Object>> column) {
         // Collect unique categories
         Set<String> uniqueCategories = column.stream()
@@ -298,7 +298,6 @@ public class DataTransformation {
             encodedValues.add(encodedValue);
         }
 
-        return encodedValues;
     }
 
     /**

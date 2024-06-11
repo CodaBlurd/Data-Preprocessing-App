@@ -36,7 +36,7 @@ public final class FileExtractorImpl implements FileExtractor {
     public List<DataModel<Object>> readDataWithApacheCSV(final String filePath)
             throws IOException {
         try (InputStream inputStream
-                     = Files.newInputStream(Paths.get(filePath))) {
+                     = Files.newInputStream(Path.of(filePath))) {
             return readDataWithApacheCSV(inputStream);
         }
     }
