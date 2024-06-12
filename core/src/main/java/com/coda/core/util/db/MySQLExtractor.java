@@ -50,7 +50,9 @@ public final class MySQLExtractor implements DatabaseExtractor {
      */
 
     @Override
-    public List<DataModel<Object>> readData(final String tableName)
+    public List<DataModel<Object>> readData(final String tableName,
+                                            final int batchSize,
+                                            final int offSet)
             throws Exception {
         // Validate or sanitize tableName to ensure it's safe to use in a query
         if (!isTableNameValid(tableName)) {

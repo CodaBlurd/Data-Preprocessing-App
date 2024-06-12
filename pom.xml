@@ -40,6 +40,7 @@
 		<jsonassert.version>1.5.0</jsonassert.version>
 		<javax.version>1.3.2</javax.version>
 		<spring-batch.version>5.0.4</spring-batch.version>
+		<spring-batch-starter.version>3.2.6</spring-batch-starter.version>
 		<mongodb-driver.version>5.1.0</mongodb-driver.version>
 		<mongodb-driver-legacy.version>5.1.0</mongodb-driver-legacy.version>
 		<apache-commons-csv.version>1.10.0</apache-commons-csv.version>
@@ -81,6 +82,14 @@
 				<artifactId>mongodb-driver-legacy</artifactId>
 				<version>${mongodb-driver-legacy.version}</version>
 			</dependency>
+
+			<!-- Spring Batch -->
+			<dependency>
+				<groupId>org.springframework.batch</groupId>
+				<artifactId>spring-batch-core</artifactId>
+				<version>${spring-batch.version}</version>
+			</dependency>
+
 
 			<!-- Apache Commons CSV -->
 			<dependency>
@@ -164,7 +173,7 @@
 				<version>${springdoc-openapi-ui.version}</version>
 			</dependency>
 
-			<!-- Jsonassert -->
+			<!-- Json assert -->
 			<dependency>
 				<groupId>org.skyscreamer</groupId>
 				<artifactId>jsonassert</artifactId>
@@ -180,12 +189,6 @@
 				<scope>provided</scope>
 			</dependency>
 
-			<!-- Spring Batch -->
-			<dependency>
-				<groupId>org.springframework.batch</groupId>
-				<artifactId>spring-batch-core</artifactId>
-				<version>${spring-batch.version}</version>
-			</dependency>
 		</dependencies>
 	</dependencyManagement>
 

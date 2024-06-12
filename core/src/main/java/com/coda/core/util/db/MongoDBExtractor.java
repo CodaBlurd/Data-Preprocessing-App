@@ -211,7 +211,9 @@ public final class MongoDBExtractor implements DatabaseExtractor {
     // == Not used for this class, but required to implement the interface ==
     @Override
     public List<DataModel<Object>> readData(
-            final String tableName) {
+            final String tableName,
+            final int batchSize,
+            final int offSet) {
         return Collections.emptyList();
     }
 
