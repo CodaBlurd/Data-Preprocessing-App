@@ -62,7 +62,7 @@ public class MySQLExtractorTest {
         when(mockResultSet.getObject(1)).thenReturn("value1");
 
         // Execute the method
-        List<DataModel<Object>> dataModels = extractor.readData("test_table");
+        List<DataModel<Object>> dataModels = extractor.readData("test_table", 10, 0);
 
         // Verify results
         assertNotNull(dataModels);

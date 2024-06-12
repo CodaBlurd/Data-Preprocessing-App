@@ -1,5 +1,6 @@
 package com.coda.core.service;
 
+import com.coda.core.batch.processor.DataModelProcessor;
 import com.coda.core.entities.DataAttributes;
 import com.coda.core.entities.DataModel;
 import com.coda.core.exceptions.DataExtractionException;
@@ -57,6 +58,9 @@ public class DataModelServiceTest {
     @Mock
     private DataTransformation dataTransformation;
 
+    @Mock
+    private DataModelProcessor dataModelProcessor;
+
 
     @InjectMocks
     private DataModelService dataModelService;
@@ -90,12 +94,14 @@ public class DataModelServiceTest {
         String url = "jdbc:mysql://localhost:3306/mydb";
         String user = "user";
         String password = "password";
+        int BATCH_SIZE = 100;
+        int offset = 0;
 
         when(databaseExtractorFactory.getExtractor(type)).thenReturn(databaseExtractor);
 
         List<DataModel<Object>> expectedDataModels = new ArrayList<>();
 
-        when(databaseExtractor.readData(tableName)).thenReturn(expectedDataModels);
+        when(databaseExtractor.readData(tableName, BATCH_SIZE, offset)).thenReturn(expectedDataModels);
 
         // Act
         List<DataModel<Object>> actualDataModels = dataModelService.extractDataFromTable(type, tableName);
@@ -103,7 +109,7 @@ public class DataModelServiceTest {
         // Assert
         assertEquals(expectedDataModels, actualDataModels);
         verify(databaseExtractorFactory).getExtractor(type);
-        verify(databaseExtractor).readData(tableName);
+        verify(databaseExtractor).readData(tableName, BATCH_SIZE, offset);
     }
 
     @Test

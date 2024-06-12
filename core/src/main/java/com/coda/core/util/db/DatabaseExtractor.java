@@ -25,11 +25,15 @@ public interface DatabaseExtractor {
      from a relational database.
      </p>
      * @param tableName The name of the table to be extracted.
+     * @param batchSize The number of rows to be extracted.
+     * @param offSet The number of rows to be skipped.
      * @return A list of DataModel objects.
      * @throws Exception if the table name is invalid.
      */
 
-    List<DataModel<Object>> readData(String tableName) throws Exception;
+    List<DataModel<Object>> readData(String tableName,
+                                     int batchSize,
+                                     int offSet) throws Exception;
 
     /**
     <p>
