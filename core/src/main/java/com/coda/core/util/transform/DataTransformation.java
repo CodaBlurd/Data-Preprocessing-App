@@ -5,15 +5,16 @@ import com.coda.core.exceptions.TransformationException;
 import com.coda.core.util.types.ErrorType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import java.util.Optional;
-import java.util.Map;
-import java.util.List;
-import java.util.Set;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.OptionalDouble;
-import java.util.Objects;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.Set;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -126,21 +127,86 @@ public class DataTransformation {
             final List<DataAttributes<T>> column,
             final String type) {
 
-        if ("String".equals(type)) {
-            Map<T, Long> valueCountMap = column.stream()
-                    .collect(Collectors
-                            .groupingBy(DataAttributes::getValue,
-                                    Collectors.counting()));
-
-            valueCountMap.entrySet().stream()
-                    .max(Map.Entry.comparingByValue())
-                    .map(Map.Entry::getKey);
-
-        } else {
-            throw new TransformationException("Error: "
-                    + "Unsupported data type for categorical values",
+        if (column.isEmpty()
+                || column.stream()
+                .allMatch(tDataAttributes
+                        -> tDataAttributes.getValue() == null)) {
+            throw new TransformationException("Error: Column is "
+                    + "empty or values are null",
                     ErrorType.TRANSFORMATION_FAILED);
         }
+
+        if ("java.lang.String".equals(type)
+                || "VARCHAR".equals(type)
+                || "TEXT".equals(type)) {
+            Map<T, Long> valueCountMap = column.stream()
+                    .filter(columnData
+                            -> columnData.getValue() != null
+                            && !columnData.getValue().toString().isEmpty())
+                    .collect(Collectors
+                            .groupingBy(DataAttributes::getValue,
+                            Collectors.counting()));
+
+            T mostFrequentValue = valueCountMap.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElseThrow(() ->
+                            new TransformationException("Error: No "
+                                    + "values found",
+                            ErrorType.TRANSFORMATION_FAILED));
+
+            for (DataAttributes<T> dataAttribute : column) {
+                if (dataAttribute.getValue() == null
+                        || dataAttribute.getValue().toString().isEmpty()) {
+                    dataAttribute.setValue(mostFrequentValue);
+                }
+            }
+        } else {
+            throw new TransformationException("Error: Unsupported data type "
+                    + " for categorical values",
+                    ErrorType.TRANSFORMATION_FAILED);
+        }
+    }
+
+    /**
+     * Replaces missing categorical values with the mode of the column.
+     * @param column The list of data attributes of the column.
+     * @param type The type of the value in the data attributes.
+     * @param <T> The type of the value in the data attributes.
+     */
+    public <T> void replaceMissingCategoricalValuesForObject(
+            final List<DataAttributes<T>> column,
+            final String type) {
+
+        if (column.isEmpty()) {
+            throw new TransformationException("Error: Column is empty",
+                    ErrorType.TRANSFORMATION_FAILED);
+        }
+        if ("Object".equals(type)) {
+            Map<T, Long> valueCountMap = column.stream()
+                    .filter(attr -> attr.getValue() != null
+                            && !attr.getValue()
+                            .toString().isEmpty()) // Filter out null values
+                    .collect(Collectors
+                            .groupingBy(DataAttributes::getValue,
+                            Collectors.counting()));
+
+            T mostFrequentValue
+                    = valueCountMap.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse(null);
+
+            for (DataAttributes<T> dataAttribute : column) {
+                if (dataAttribute.getValue() == null
+                        || dataAttribute.getValue().toString().isEmpty()) {
+                    dataAttribute.setValue(mostFrequentValue);
+                }
+            }
+
+        }
+
+
     }
 
     /**
@@ -158,52 +224,76 @@ public class DataTransformation {
             throws ClassNotFoundException {
 
         String typeClazzName = attribute.getTypeClazzName();
-        if (Number.class.isAssignableFrom(Class.forName(typeClazzName))) {
+        log.info("Type Class Name: {}", typeClazzName);
+        log.info("Attribute Value: {}", attribute.getValue());
+        log.info("Attribute Type: {}", attribute.getType());
+
+        Class<?> clazz = Class.forName(typeClazzName);
+
+        if (Number.class.isAssignableFrom(clazz)) {
             OptionalDouble average = column.stream()
                     .filter(attr -> attr.getValue() != null)
                     .mapToDouble(attr -> ((Number) attr.getValue())
-                            .doubleValue()).average();
+                            .doubleValue())
+                    .average();
+            log.info("Average: {}", average);
 
             if (average.isPresent()) {
                 if (attribute.getValue() == null) {
-                    if (typeClazzName
-                            .equals(Integer.class.getName())) {
-                        attribute.setValue((T) Integer
-                                .valueOf((int) average.getAsDouble()));
-                    } else if (typeClazzName
-                            .equals(Double.class.getName())) {
-                        attribute.setValue((T)
-                                Double.valueOf(average.getAsDouble()));
-                    } else if (typeClazzName
-                            .equals(Float.class.getName())) {
-                        attribute.setValue((T)
-                                Float.valueOf((float) average.getAsDouble()));
-                    } else if (typeClazzName
-                            .equals(Long.class.getName())) {
-                        attribute.setValue((T)
-                                Long.valueOf((long) average.getAsDouble()));
+                    double avgValue = average.getAsDouble();
+                    switch (typeClazzName) {
+                        case "java.lang.Integer":
+                            attribute.setValue((T) Integer
+                                    .valueOf((int) avgValue));
+                            break;
+                        case "java.lang.Double":
+                            attribute.setValue((T) Double
+                                    .valueOf(avgValue));
+                            break;
+                        case "java.lang.Float":
+                            attribute.setValue((T) Float
+                                    .valueOf((float) avgValue));
+                            break;
+                        case "java.lang.Long":
+                            attribute.setValue((T) Long
+                                    .valueOf((long) avgValue));
+                            break;
+                        case "java.math.BigDecimal":
+                            attribute.setValue((T) BigDecimal
+                                    .valueOf(avgValue));
+                            break;
+                        default:
+                            log.error("Unsupported numerical type: {}",
+                                    typeClazzName);
+                            throw new IllegalArgumentException("Unsupported "
+                                    + "numerical type: " + typeClazzName);
                     }
                 }
             } else {
-                log.warn("Mean calculation failed due to empty "
-                                + "or invalid data for column: {}",
+                log.warn("Mean calculation "
+                        + "failed due to empty or "
+                        + "invalid data for column: {}",
                         attribute.getAttributeName());
             }
         } else {
-            log.error("Attempted to calculate numerical mean"
-                            + " for non-numerical type: {}",
+            log.error("Attempted to calculate numerical "
+                    + "mean for non-numerical type: {}",
                     typeClazzName);
-            throw new ArithmeticException("Attempt to calculate numerical "
+            throw new ArithmeticException("Attempt to "
+                    + "calculate numerical "
                     + "mean for non-numerical type failed");
         }
     }
+
+
 
     /**
      * Normalizes the data in the column.
      * @param column The list of data attributes of the column.
      * @param attribute The data attribute to be normalized.
      * @param <T> The type of the value in the data attribute.
-     * @throws ClassNotFoundException If the class of the type cannot be found.
+     * @throws ClassNotFoundException If the class of -
+     * the type cannot be found.
      */
 
 
@@ -214,55 +304,99 @@ public class DataTransformation {
             throws ClassNotFoundException {
 
         String typeClazzName = attribute.getTypeClazzName();
-        if (Number.class.isAssignableFrom(Class.forName(typeClazzName))) {
-            OptionalDouble mean = column.stream()
-                    .filter(attr -> attr.getValue() != null)
-                    .mapToDouble(attr -> ((Number) attr.getValue())
-                            .doubleValue()).average();
-            if (mean.isEmpty()) {
-                log.warn("Mean calculation failed due to "
-                        + "empty or invalid data for column: {}",
-                        attribute.getAttributeName());
-                return;
-            }
-            double meanValue = mean.getAsDouble();
+        log.info("Type Class Name: {}", typeClazzName);
 
-            OptionalDouble variance = column.stream()
+        if (Number.class
+                .isAssignableFrom(
+                        Class.forName(typeClazzName))) {
+
+            OptionalDouble meanOpt
+                    = column.stream()
                     .filter(attr -> attr.getValue() != null)
                     .mapToDouble(attr -> ((Number) attr.getValue())
                             .doubleValue())
-                    .map(val -> Math.pow(val - meanValue, 2)).average();
-            if (variance.isEmpty()) {
-                log.warn("Standard deviation calculation failed due "
-                        + "to empty or invalid data for column: {}",
+                    .average();
+
+            if (meanOpt.isEmpty()) {
+                log.warn("Mean calculation failed due to empty "
+                                + " or invalid data for column: {}",
                         attribute.getAttributeName());
                 return;
             }
+            double meanValue = meanOpt.getAsDouble();
+            log.info("Mean: {}", meanValue);
 
-            double stdDev = Math.sqrt(variance.getAsDouble());
+            OptionalDouble varianceOpt = column.stream()
+                    .filter(attr -> attr.getValue() != null)
+                    .mapToDouble(attr -> {
+                        double val = ((Number)
+                                attr.getValue()).doubleValue();
+                        return Math.pow(val - meanValue, 2);
+                    }).average();
+
+            if (varianceOpt.isEmpty()) {
+                log.warn("Standard deviation calculation "
+                                + "failed due to empty or "
+                                + "invalid data for column: {}",
+                        attribute.getAttributeName());
+                return;
+            }
+            double stdDev
+                    = Math.sqrt(varianceOpt.getAsDouble());
+            log.info("Standard Deviation: {}", stdDev);
 
             column.stream()
-                    .filter(attr ->
-                            attr.getValue() != null)
+                    .filter(attr -> attr.getValue() != null)
                     .forEach(attr -> {
-                double normalizedValue
-                        = ((Number) attr.getValue())
-                        .doubleValue() - meanValue;
-                normalizedValue /= stdDev;
-                try {
-                    attr.setValue((T) Class.forName(typeClazzName)
-                            .cast(normalizedValue));
-                } catch (ClassNotFoundException e) {
-                    throw new RuntimeException(e);
-                }
-            });
+
+                        double normalizedValue;
+                        if (stdDev == 0) {
+                            normalizedValue = 0;
+                        } else {
+                            normalizedValue = (((Number) attr
+                                    .getValue())
+                                    .doubleValue() - meanValue) / stdDev;
+                        }
+
+                        log.info("Normalized Value: {}", normalizedValue);
+                        try {
+                            T castedValue = switch (typeClazzName) {
+                                case "java.lang.Integer"
+                                        -> (T) Integer
+                                        .valueOf((int) normalizedValue);
+                                case "java.lang.Double"
+                                        -> (T) Double
+                                        .valueOf(normalizedValue);
+                                case "java.lang.Float"
+                                        -> (T) Float
+                                        .valueOf((float) normalizedValue);
+                                case "java.lang.Long"
+                                        -> (T) Long
+                                        .valueOf((long) normalizedValue);
+                                case "java.math.BigDecimal"
+                                        -> (T) BigDecimal
+                                        .valueOf(normalizedValue);
+                                default ->
+                                        throw new IllegalArgumentException(
+                                                "Unsupported "
+                                                + "numerical type: "
+                                                + typeClazzName);
+                            };
+                            attr.setValue(castedValue);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Error setting "
+                                    + "normalized value", e);
+                        }
+                    });
         } else {
-            log.error("Attempted to normalize data for non-numerical type: {}",
+            log.error("Attempted to normalize "
+                            + "data for non-numerical type: {}",
                     typeClazzName);
-            throw new ArithmeticException("Attempt to normalize data"
-                    + " for non-numerical type failed");
+            throw new ArithmeticException("Attempt to normalize "
+                    + "data for non-numerical type failed");
         }
     }
+
 
     /**
      * encodeCategoricalData encodes categorical data.
@@ -281,7 +415,8 @@ public class DataTransformation {
                 .map(String.class::cast)
                 .collect(Collectors.toSet());
 
-        List<Map<String, Integer>> encodedValues = new ArrayList<>();
+        List<Map<String, Integer>> encodedValues
+                = new ArrayList<>();
 
         for (DataAttributes<Object> attribute : column) {
             Map<String, Integer> encodedValue = new HashMap<>();
@@ -340,6 +475,19 @@ public class DataTransformation {
             double value = attr.getValue().doubleValue();
             return value < lowerThreshold || value > upperThreshold;
         });
+    }
+
+    /**
+     * replaceMissingObjectValues().
+     * @param dataAttributes The list of data attributes of the column.
+     * @param dataAttributes1 The data attribute to be replaced.
+     */
+
+    public void replaceMissingObjectValues(
+            final List<DataAttributes<Object>> dataAttributes,
+            final DataAttributes<Object> dataAttributes1) {
+
+
     }
 
     //standardize data formats

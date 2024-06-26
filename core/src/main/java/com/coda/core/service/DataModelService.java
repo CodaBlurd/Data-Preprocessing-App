@@ -14,6 +14,7 @@ import com.coda.core.util.transform.DataTransformation;
 import com.coda.core.util.types.ErrorType;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -101,7 +102,7 @@ public class DataModelService {
      * @param transformation the DataTransformation object.
      * @param processor the DataModelProcessor object.
      */
-    public DataModelService(final DataModelRepository dataModels,
+    public DataModelService(@Qualifier("dataModelRepository") final DataModelRepository dataModels,
                             final DatabaseExtractorFactory dbExtractorFactory,
                             final FileExtractor fExtractor,
                             final ResourceLoader resLoader,
@@ -123,9 +124,10 @@ public class DataModelService {
 
     /**
      * Reads data from a relational database.
+     *
      * @param tableName The name of the table to read from
-     * @param type The type of the database
-     *  The table name must be a valid table name
+     * @param type      The type of the database
+     *                  The table name must be a valid table name
      * @return A list of DataModel objects
      * @throws ReadFromDbExceptions if the table name is invalid
      */
@@ -157,9 +159,7 @@ public class DataModelService {
                 allDataModels.addAll(dataModels);
                 offSet += BATCH_SIZE;
             }
-//            List<DataModel<Object>> dataModels = databaseExtractor
-//                    .readData(tableName);
-//            processAndSaveDataModels(allDataModels);
+
             return allDataModels;
 
         } catch (IOException e) {
@@ -256,12 +256,12 @@ public class DataModelService {
 
     /**
      * Reads data from a file on the file system.
+     *
      * @param filePath The path of the file to read from
-     * @return A list of DataModel objects
      * @throws DataExtractionException if the file path is invalid
      */
 
-    public List<DataModel<Object>> extractDataFromFileOnFileSystem(
+    public void extractDataFromFileOnFileSystem(
             final String filePath)
             throws DataExtractionException {
         validateFilePath(filePath);
@@ -273,7 +273,6 @@ public class DataModelService {
             List<DataModel<Object>> dataModels
                     = fileExtractor.readDataWithApacheCSV(inputStream);
             processAndSaveDataModels(dataModels);
-            return dataModels;
         } catch (IOException e) {
             log.error("Error while reading data from file: {}", filePath, e);
             throw new DataExtractionException(
@@ -299,6 +298,7 @@ public class DataModelService {
      * @param type the database type.
      */
 
+    @Transactional(rollbackFor = DataLoadingException.class)
     public void loadDataToSQL(final List<DataModel<Object>> dataModels,
                               final String tableName, final String type) {
 
@@ -335,7 +335,7 @@ public class DataModelService {
      * @param type The type of the database.
      */
 
-
+    @Transactional(rollbackFor = DataLoadingException.class)
     public void loadDataToMongo(final Map<String,
                                 DataModel<Document>> dataModels,
                                 final String dbName, final String tableName,
@@ -368,12 +368,9 @@ public class DataModelService {
         * Loads data to a CSV file.
         * @param dataModels The list of DataModel objects to load.
         * @param filePath The path of the file to write to.
-        * @throws DataExtractionException if the file path is invalid.
-        * @throws IOException if the file cannot be written to.
      */
     public void loadDataToCSV(final List<DataModel<Object>> dataModels,
-                              final String filePath)
-            throws DataExtractionException, IOException {
+                              final String filePath) {
         validateArguments(dataModels, filePath);
 
         try {
@@ -388,8 +385,11 @@ public class DataModelService {
                         ErrorType.FILE_NOT_WRITABLE);
             }
 
+            log.info("Writing data to file: {}", filePath);
             fileExtractor.writeDataWithApacheCSV(dataModels, filePath);
             dataModelRepository.saveAll(dataModels);
+
+            log.info("Data written to file: {}", filePath);
         } catch (AccessDeniedException e) {
             log.error("Access denied to file: {}", filePath, e);
             throw new DataLoadingException("Access denied to "

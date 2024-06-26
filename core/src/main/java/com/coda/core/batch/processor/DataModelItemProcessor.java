@@ -4,7 +4,6 @@ import com.coda.core.entities.DataModel;
 import com.coda.core.repository.DataModelRepository;
 import com.coda.core.util.Constants;
 import org.springframework.batch.item.ItemProcessor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
@@ -21,16 +20,25 @@ public class DataModelItemProcessor
     /**
      * The DataModelProcessor object.
      */
-
-    @Autowired
-    private DataModelProcessor dataModelProcessor;
+    private final DataModelProcessor dataModelProcessor;
 
     /**
      * The DataModelRepository object.
      */
 
-    @Autowired
-    private DataModelRepository dataModelRepository;
+    private final DataModelRepository dataModelRepository;
+
+    /**
+     * Constructor for DataModelItemProcessor.
+     * @param processor the DataModelProcessor object.
+     * @param dataModelRepository the DataModelRepository object.
+     */
+
+    public DataModelItemProcessor(final DataModelProcessor processor,
+            final DataModelRepository dataModelRepository) {
+        this.dataModelProcessor = processor;
+        this.dataModelRepository = dataModelRepository;
+    }
 
     /**
      * Process the DataModel object.

@@ -19,7 +19,8 @@ public final class Queries {
      * The query is defined as a constant.
      * </p>
      */
-    public static final String READ_FROM_MYSQL = "SELECT * FROM %s";
+    public static final String READ_FROM_MYSQL
+            = "SELECT * FROM %s LIMIT ? OFFSET ?";
 
     /**
      * Query to extract data from MongoDB.

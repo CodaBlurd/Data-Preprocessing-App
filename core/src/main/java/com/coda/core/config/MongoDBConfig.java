@@ -5,6 +5,7 @@ import com.mongodb.client.MongoClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
@@ -33,6 +34,7 @@ public class MongoDBConfig {
      */
 
     @Bean
+    @Primary
     public MongoClient mongoClient() {
 
         return MongoDBUtil
@@ -48,6 +50,7 @@ public class MongoDBConfig {
     * @return MongoDatabaseFactory object.
     */
     @Bean
+    @Primary
     public MongoDatabaseFactory mongoDatabaseFactory() {
         return new SimpleMongoClientDatabaseFactory(mongoClient(),
                 mongoDBProperties.getDatabase());
@@ -58,6 +61,7 @@ public class MongoDBConfig {
     */
 
     @Bean
+    @Primary
     public MongoTemplate mongoTemplate() {
 
         return new MongoTemplate(mongoDatabaseFactory());

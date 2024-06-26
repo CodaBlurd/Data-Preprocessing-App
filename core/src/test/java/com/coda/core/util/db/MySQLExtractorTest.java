@@ -9,6 +9,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -26,7 +27,11 @@ import static org.mockito.Mockito.*;
 public class MySQLExtractorTest {
 
     @Mock
-    ConnectionFactory connectionFactory;
+    private ConnectionFactory connectionFactory;
+
+    @Mock
+    private DataSource dataSource;
+
 
 
     @InjectMocks
@@ -43,14 +48,16 @@ public class MySQLExtractorTest {
     public void testReadData() throws Exception {
         // Mocking dependencies
         Connection mockConnection = mock(Connection.class);
+        DataSource mockDataSource = mock(DataSource.class);
         PreparedStatement mockPreparedStatement = mock(PreparedStatement.class);
         ResultSet mockResultSet = mock(ResultSet.class);
         ResultSetMetaData mockResultSetMetaData = mock(ResultSetMetaData.class);
 
-        String mockQuery = "SELECT * FROM test_table";
+        String mockQuery = "SELECT * FROM test_table LIMIT ? OFFSET ?";
 
         // Setting up the mocks
-        when(connectionFactory.connectToMySQL()).thenReturn(mockConnection);
+        when(connectionFactory.dataSource()).thenReturn(mockDataSource);
+        when(mockDataSource.getConnection()).thenReturn(mockConnection);
         when(mockConnection.prepareStatement(mockQuery)).thenReturn(mockPreparedStatement);
         when(mockPreparedStatement.executeQuery()).thenReturn(mockResultSet);
         when(mockResultSet.getMetaData()).thenReturn(mockResultSetMetaData);
@@ -73,16 +80,22 @@ public class MySQLExtractorTest {
 
         // Verify the id is correctly parsed
         assertEquals("60c72b2f5f1b2c6f1f4b25a4", dataModel.getId().toHexString());
+
+        // Verify that the prepared statement parameters were set correctly
+        verify(mockPreparedStatement).setInt(1, 10);
+        verify(mockPreparedStatement).setInt(2, 0);
     }
 
-    @Test
+        @Test
     public void testLoadData() throws Exception {
         // Mocking dependencies
         Connection mockConnection = mock(Connection.class);
         PreparedStatement mockPreparedStatement = mock(PreparedStatement.class);
+        DataSource  mockDataSource = mock(DataSource.class);
 
         // Setting up the mocks
-        when(connectionFactory.connectToMySQL()).thenReturn(mockConnection);
+        when(connectionFactory.dataSource()).thenReturn(mockDataSource);
+        when(connectionFactory.dataSource().getConnection()).thenReturn(mockConnection);
         when(mockConnection.prepareStatement(anyString())).thenReturn(mockPreparedStatement);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[]{1}); // Mock executeBatch to return non-null
 

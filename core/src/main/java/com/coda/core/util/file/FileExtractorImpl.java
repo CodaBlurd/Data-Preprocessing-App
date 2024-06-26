@@ -124,6 +124,7 @@ public final class FileExtractorImpl implements FileExtractor {
                         .map(Object::toString)
                         .collect(Collectors.toList());
                 csvPrinter.printRecord(record);
+                log.info("Record written: {}", record);
             }
             csvPrinter.flush();
         } catch (IOException e) {

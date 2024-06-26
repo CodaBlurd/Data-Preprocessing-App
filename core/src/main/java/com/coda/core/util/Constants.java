@@ -18,7 +18,7 @@ public final class Constants {
         /**
          * Enum values.
          */
-        FILE_SYSTEM, CLASSPATH, SQL, MONGO
+        FILE_SYSTEM, CLASSPATH, MYSQL, MONGO
     }
 
     /**
