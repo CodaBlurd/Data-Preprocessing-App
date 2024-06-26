@@ -2,6 +2,8 @@ package com.coda.console;
 
 import com.coda.core.service.DataModelService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,15 +12,12 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 public class DataModelServiceRunner {
 
-    /**
-     * The runner method to execute data model service methods.
-     * @param dataModelService the dataModel service
-     * @return CommandLineRunner instance
-     */
     @Bean
-    public CommandLineRunner runner(final DataModelService dataModelService) {
+    public CommandLineRunner runner(final DataModelService dataModelService,
+                                    final JobLauncher jobLauncher,
+                                    final Job importDataJob) {
         return args -> {
-            ConsoleMenu consoleMenu = new ConsoleMenu(dataModelService);
+            ConsoleMenu consoleMenu = new ConsoleMenu(dataModelService, jobLauncher, importDataJob);
             consoleMenu.displayMenu();
         };
     }

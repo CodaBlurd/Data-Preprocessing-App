@@ -1,6 +1,6 @@
 package com.coda.core.util.db;
 
-import java.sql.Connection;
+import javax.sql.DataSource;
 
 /**
  <p>ConnectionFactory is an interface that
@@ -12,29 +12,10 @@ import java.sql.Connection;
  */
 
 public interface ConnectionFactory {
-
     /**
-     <p>
-     This method is a factory method
-     establishes connection to a any sql
-     db depending on the implementing class implementation.
-     </p>
-     * @param url the connection url.
-     * @param user the user connecting to the db.
-     * @param password the password of the user.
-     * @return Connection object.
-     * @throws Exception if the connection fails.
+     * This method establishes obtain the datasource.
+     * @return DataSource object.
      */
-    Connection connect(
-            String url, String user,
-            String password)
-            throws Exception;
-
-    /**
-     * This method establishes a connection to a mysql db.
-     * @return Connection object.
-     * @throws Exception if the connection fails.
-     */
-    Connection connectToMySQL() throws Exception;
+    DataSource dataSource();
 }
 

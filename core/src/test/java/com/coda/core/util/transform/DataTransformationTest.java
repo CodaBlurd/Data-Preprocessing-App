@@ -2,7 +2,6 @@ package com.coda.core.util.transform;
 
 import com.coda.core.entities.DataAttributes;
 import com.coda.core.exceptions.TransformationException;
-import com.coda.core.util.transform.DataTransformation;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -82,9 +81,37 @@ public class DataTransformationTest {
     public void testReplaceMissingCategoricalValues_StringType_MissingValues() {
         List<DataAttributes<String>> column = new ArrayList<>();
         // Add some data to the column, including null values.
-        dataTransformation.replaceMissingCategoricalValues(column, "String");
+        column.add(new DataAttributes<>("Name", null,
+                "Java.lang.String", String.class));
+        column.add(new DataAttributes<>("Age", "30",
+                "java.lang.String", String.class));
+        column.add(new DataAttributes<>("Address", null,
+                "java.lang.String", String.class));
+
+        for (DataAttributes<String> attribute : column) {
+            log.info("Before: {}", attribute.getValue());
+            log.info("Type: {}", attribute.getType());
+            log.info("Name: {}", attribute.getAttributeName());
+            log.info("Class: {}", attribute.getTypeClazzName());
+            log.info("Format: {}", attribute.getFormat());
+            log.info("----------");
+
+        }
+
+        dataTransformation.replaceMissingCategoricalValues(column, "java.lang.String");
+
+
         // Add assertions here to verify the behavior of the replaceMissingCategoricalValues method.
-        assertEquals(0, column.size());
+        assertEquals(3, column.size());
+
+        for (DataAttributes<String> attribute : column) {
+            log.info("After: {}", attribute.getValue());
+            log.info("Type: {}", attribute.getType());
+            log.info("Name: {}", attribute.getAttributeName());
+            log.info("Class: {}", attribute.getTypeClazzName());
+            log.info("Format: {}", attribute.getFormat());
+            log.info("----------");
+        }
     }
 
     @Test
@@ -92,16 +119,16 @@ public class DataTransformationTest {
         List<DataAttributes<String>> column = new ArrayList<>();
         // Add some data to the column, without null values.
         column.add(new DataAttributes<>("Name", "John",
-                "String", String.class));
+                "java.lang.String", String.class));
         column.add(new DataAttributes<>("Age", "30",
-                "String", String.class));
+                "java.lang.String", String.class));
         // Add some data to the column, with no null values.
-        dataTransformation.replaceMissingCategoricalValues(column, "String");
+        dataTransformation.replaceMissingCategoricalValues(column, "java.lang.String");
         // Add assertions here to verify the behavior of the replaceMissingCategoricalValues method.
         assertEquals(2, column.size());
         assertEquals("John", column.get(0).getValue());
         assertEquals("30", column.get(1).getValue());
-        assertEquals("String", column.get(0).getType());
+        assertEquals("java.lang.String", column.get(0).getType());
 
     }
 

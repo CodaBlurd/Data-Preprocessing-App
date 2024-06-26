@@ -25,8 +25,6 @@
 	<properties>
 		<java.version>19</java.version>
 		<lombok.version>1.18.30</lombok.version>
-		<mysql.version>8.0.33</mysql.version>
-		<h2.version>2.2.224</h2.version>
 		<webMvcTest.version>3.2.1</webMvcTest.version>
 		<mockMvc.version>6.1.2</mockMvc.version>
 		<junit.version>5.10.1</junit.version>
@@ -62,13 +60,6 @@
 				<groupId>com.puppycrawl.tools</groupId>
 				<artifactId>checkstyle</artifactId>
 				<version>${checkstyle.version}</version>
-			</dependency>
-
-			<!-- MySQL -->
-			<dependency>
-				<groupId>mysql</groupId>
-				<artifactId>mysql-connector-java</artifactId>
-				<version>${mysql.version}</version>
 			</dependency>
 
 			<!-- MongoDB -->
