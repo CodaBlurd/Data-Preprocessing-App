@@ -1,111 +1,76 @@
 package com.coda.core.util.db;
 
-import com.coda.core.config.MySQLProperties;
+import com.coda.core.dtos.ConnectionDetails;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 
 /**
- <p>
-        SqlDbConnectionFactory is a class that
-        creates a connection to a SQL database.
- </p>
-    <p>
-            It implements the ConnectionFactory interface
-            and overrides the connect method to create
-            a connection to a SQL database.
-    </p>
+ * SqlDbConnectionFactory is a class that creates a connection to a SQL database.
  */
-
 @Slf4j
 @Component
 public class SqlDbConnectionFactory implements ConnectionFactory {
 
-    /**
-     * This field stores the MySQLProperties object.
-     * The MySqlProperties class is used to store
-     * the database connection details.
-     * @see MySQLProperties
-     */
-    private final MySQLProperties mySQLProperties;
-
-
-    /**
-     * This field stores the HikariDataSource object.
-     * The HikariDataSource class is used to create
-     * a connection pool to the database.
-     * @see HikariDataSource
-     */
     private HikariDataSource dataSource;
 
     /**
-     * This constructor initializes the mySQLProperties field
-     * with the value provided.
-     * @param properties MySQLProperties object
+     * The driver class name of the database.
      */
-    @Autowired
-    public SqlDbConnectionFactory(final MySQLProperties properties) {
-        this.mySQLProperties = properties;
-        this.dataSource = initializeDataSource();
-
-    }
+    private final static String DRIVER_CLASS_NAME = "com.mysql.cj.jdbc.Driver";
 
     /**
-     * This method returns the DataSource object.
-     * @return DataSource object
+     * The maximum number of connections that can be
+     * allocated in the connection pool.
+     */
+    private final static int MAXIMUM_POOL_SIZE = 10;
+    /**
+     * The idle timeout in milliseconds for connections in the pool.
+     */
+    private final static long IDLE_TIME_OUT = 600000;
+    /**
+     * The maximum lifetime in milliseconds of a connection in the pool.
+     */
+    private final static long MAX_LIFE_TIME = 600000;
+    /**
+     * The connection timeout in milliseconds for the connection.
+     */
+    private final static long CONNECTION_TIME_OUT = 30000;
+
+    /**
+     * Dynamically creates a DataSource based on user-provided connection details.
+     * @param connectionDetails The connection details provided by the user.
      */
 
     @Override
-    public DataSource dataSource() {
-        return this.dataSource;
+    public void createDataSource(ConnectionDetails connectionDetails) {
+        log.info("Initializing Hikari DataSource with user-provided connection details");
+
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(connectionDetails.getUrl());
+        config.setUsername(connectionDetails.getUsername());
+        config.setPassword(connectionDetails.getPassword());
+        config.setDriverClassName(DRIVER_CLASS_NAME);
+
+        config.setMaximumPoolSize(MAXIMUM_POOL_SIZE);
+        config.setMaxLifetime(MAX_LIFE_TIME);
+        config.setConnectionTimeout(CONNECTION_TIME_OUT);
+        config.setIdleTimeout(IDLE_TIME_OUT);
+        config.setAutoCommit(true);
+        config.addDataSourceProperty("cachePrepStmts", true);
+
+        this.dataSource = new HikariDataSource(config);
     }
 
     /**
-     * This method initializes the HikariDataSource object.
-     * with the database connection details.
-     *
-     * @see HikariDataSource
-     * @see MySQLProperties
-     * @see DatabaseNames
-     * @return HikariDataSource object
+     * Returns the current DataSource.
+     * @return DataSource object
      */
-    private HikariDataSource initializeDataSource() {
-        log.info("Initializing Hikari DataSource");
-
-        if (mySQLProperties.getUrl() == null
-                || mySQLProperties.getUrl().isEmpty()
-                || mySQLProperties.getUsername() == null
-                || mySQLProperties.getPassword().isEmpty()
-                || mySQLProperties.getDriverClassName() == null
-                || mySQLProperties.getDriverClassName().isEmpty()) {
-            log.warn("MySQL properties are not fully set,"
-                    + " skipping DataSource initialization");
-            return null;
-        }
-
-        HikariConfig config = getHikariConfig();
-
-        return new HikariDataSource(config);
-
-    }
-
-    private HikariConfig getHikariConfig() {
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(mySQLProperties.getUrl());
-        config.setUsername(mySQLProperties.getUsername());
-        config.setPassword(mySQLProperties.getPassword());
-        config.setDriverClassName(mySQLProperties.getDriverClassName());
-
-        config.setMaximumPoolSize(mySQLProperties.getMaximumPoolSize());
-        config.setMaxLifetime(mySQLProperties.getMaxLifetime());
-        config.setConnectionTimeout(mySQLProperties.getConnectionTimeout());
-        config.setIdleTimeout(mySQLProperties.getIdleTimeout());
-        config.setAutoCommit(true);
-        config.addDataSourceProperty("cachePrepStmts", true);
-        return config;
+    @Override
+    public DataSource dataSource() {
+        return this.dataSource;
     }
 }

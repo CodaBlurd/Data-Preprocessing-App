@@ -1,6 +1,7 @@
 package com.coda.core.service;
 
 import com.coda.core.batch.processor.DataModelProcessor;
+import com.coda.core.dtos.ConnectionDetails;
 import com.coda.core.entities.DataAttributes;
 import com.coda.core.entities.DataModel;
 import com.coda.core.exceptions.DataExtractionException;
@@ -89,31 +90,50 @@ public class DataModelServiceTest {
     @Test
     public void testExtractDataFromTable() throws Exception {
         // Arrange
+        ConnectionDetails connectionDetails
+                = new ConnectionDetails("url",
+                "username",
+                "password");
+
         String type = "mysql";
-        String tableName = "testTable";
-        String url = "jdbc:mysql://localhost:3306/mydb";
-        String user = "user";
-        String password = "password";
+        String tableName = "test_table";
         int BATCH_SIZE = 100;
         int offset = 0;
 
         when(databaseExtractorFactory.getExtractor(type)).thenReturn(databaseExtractor);
 
         List<DataModel<Object>> expectedDataModels = new ArrayList<>();
+        DataModel<Object> model = new DataModel<>();
+        DataAttributes<Object> attribute = new DataAttributes<>("column1", "value1", "VARCHAR", Object.class);
+        model.setAttributesMap(Map.of("column1", attribute));
+
+        DataModel<Object> model1 = new DataModel<>();
+        DataAttributes<Object> attribute1 = new DataAttributes<>("column2", "value2", "VARCHAR", Object.class);
+        model1.setAttributesMap(Map.of("column2", attribute1));
+
+        expectedDataModels.add(model);
+        expectedDataModels.add(model1);
 
         when(databaseExtractor.readData(tableName, BATCH_SIZE, offset)).thenReturn(expectedDataModels);
+        when(databaseExtractor.readData(tableName, BATCH_SIZE, offset + BATCH_SIZE)).thenReturn(Collections.emptyList());
 
         // Act
-        List<DataModel<Object>> actualDataModels = dataModelService.extractDataFromTable(type, tableName);
+        List<DataModel<Object>> actualDataModels
+                = dataModelService.extractDataFromTable(connectionDetails, type, tableName);
 
         // Assert
         assertEquals(expectedDataModels, actualDataModels);
         verify(databaseExtractorFactory).getExtractor(type);
         verify(databaseExtractor).readData(tableName, BATCH_SIZE, offset);
+        verify(databaseExtractor).readData(tableName, BATCH_SIZE, offset + BATCH_SIZE);
+        verify(databaseExtractor).configureDataSource(connectionDetails);
+        verify(databaseExtractor, times(2)).readData(anyString(), anyInt(), anyInt()); // Called twice: first for data retrieval, second returns empty list
+        verify(dataModelProcessor, times(1)).processAndSaveDataModels(anyList(), anyInt(), any());
     }
 
+
     @Test
-    void testExtractDataFromTableNoSQL() throws Exception {
+    void testExtractDataFromTableNoSQL() {
         String type = "mongodb";
         String databaseName = "sampleDB";
         String tableName = "sampleTable";

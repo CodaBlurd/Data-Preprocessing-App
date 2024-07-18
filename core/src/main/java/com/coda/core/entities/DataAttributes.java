@@ -101,12 +101,14 @@ public final class DataAttributes<T> implements Serializable {
      * example of parsed rules are non-negative, non-empty etc.
      */
     private Set<String> parsedRules = new HashSet<>();
+    // example Hashset data = { "non-negative", "non-empty"}
 
     /**
      * The metadata of the attribute.
      * i.e. the data about the column.
      */
     private Map<String, T> metadata = new HashMap<>();
+    // example metadata data = {{ "key1" : "value1"}, { "key2" : "value2"}
 
     /**
      * The last updated date of the attribute.
@@ -119,6 +121,11 @@ public final class DataAttributes<T> implements Serializable {
      * i.e. the class token for type safety.
      */
     private String typeClazzName;
+
+    /**
+     * The encoded values of the categorical variables.
+     */
+    private Map<String, Integer> encodedValues;
 
     /**
      * Constructor for DataAttributes.
@@ -140,7 +147,6 @@ public final class DataAttributes<T> implements Serializable {
         this.type = columnTypeName;
 
         this.typeClazzName = clazzToken.getName();
-
         // Parse the validation rules
         parseValidationRules();
 
@@ -166,7 +172,7 @@ public final class DataAttributes<T> implements Serializable {
         if (validationRules != null
                 && !validationRules.isEmpty()) {
             Arrays.stream(
-                    validationRules.split(","))
+                    validationRules.split("\\|"))
                     .map(String::trim).forEach(parsedRules::add);
         }
     }
@@ -175,8 +181,10 @@ public final class DataAttributes<T> implements Serializable {
      * Applies the default value to the attribute.
      */
     public void applyDefaultValue() {
-        value = defaultValue;
-
+        if (value == null || (value instanceof String
+                && ((String) value).isEmpty())) {
+            value = defaultValue;
+        }
     }
 
     /**
@@ -187,12 +195,12 @@ public final class DataAttributes<T> implements Serializable {
             validationRulesList.add(Objects::nonNull);
         }
         if (parsedRules.contains("non-negative")
-                && Number.class.isAssignableFrom(value.getClass())) {
+                && (value instanceof  Number)) {
             validationRulesList
                     .add(val -> ((Number) val).doubleValue() >= 0);
         }
         if (parsedRules.contains("non-empty")
-                && value instanceof String) {
+                && value instanceof  String) {
             validationRulesList
                     .add(val -> !((String) val).isEmpty());
         }
@@ -207,11 +215,23 @@ public final class DataAttributes<T> implements Serializable {
         if (value == null
                 || (value instanceof String
                 && ((String) value).isEmpty())) {
+            if (required) {
+                log.error("Validation failed for attribute '{}': "
+                        + "value is required but null or empty", attributeName);
+                return false;
+            }
             return true;
+
+        }
+        for (Predicate<T> rule : validationRulesList) {
+            if (!rule.test(value)) {
+                log.error("Validation failed for attribute '{}': "
+                        + "rule '{}' not satisfied for value '{}'", attributeName, rule, value);
+                return false;
+            }
         }
 
-        return !validationRulesList.stream()
-                .allMatch(rule -> rule.test(value));
+        return true;
     }
 
     /**

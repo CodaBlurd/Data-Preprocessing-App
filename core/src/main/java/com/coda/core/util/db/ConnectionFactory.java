@@ -1,5 +1,7 @@
 package com.coda.core.util.db;
 
+import com.coda.core.dtos.ConnectionDetails;
+
 import javax.sql.DataSource;
 
 /**
@@ -17,5 +19,7 @@ public interface ConnectionFactory {
      * @return DataSource object.
      */
     DataSource dataSource();
+
+    void createDataSource(ConnectionDetails connectionDetails);
 }
 

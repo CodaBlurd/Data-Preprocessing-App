@@ -9,6 +9,8 @@ package com.coda.core.util.db;
  */
 public final class Queries {
 
+    public static final String SELECT_ALL_FROM_PRODUCTS_COPY10 = "SELECT * FROM products_copy12";
+
     private Queries() {
         // private constructor to prevent instantiation
     }
