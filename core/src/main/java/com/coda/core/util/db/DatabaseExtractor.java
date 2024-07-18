@@ -1,5 +1,6 @@
 package com.coda.core.util.db;
 
+import com.coda.core.dtos.ConnectionDetails;
 import com.coda.core.entities.DataModel;
 import org.bson.Document;
 
@@ -18,6 +19,13 @@ import java.util.Map;
  */
 
 public interface DatabaseExtractor {
+
+    /**
+     * configureDataSource().
+     * @param connectionDetails The connection details provided by the user.
+     */
+     void configureDataSource(ConnectionDetails connectionDetails);
+
 
     /**
      <p>

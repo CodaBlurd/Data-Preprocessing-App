@@ -24,6 +24,11 @@ public final class MySQLDataTypes {
    */
         public static final String BOOLEAN = "BOOLEAN";
 
+        /**
+         * The constant TINYINT.
+         */
+        public static final String TINYINT = "TINYINT";
+
     /**
      * The constant DATE.
      */

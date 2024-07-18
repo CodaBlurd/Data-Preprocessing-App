@@ -3,6 +3,7 @@ package com.coda.core.util.db;
 
 import com.coda.core.config.MongoDBConfig;
 import com.coda.core.config.MongoDBProperties;
+import com.coda.core.dtos.ConnectionDetails;
 import com.coda.core.entities.DataAttributes;
 import com.coda.core.entities.DataModel;
 import com.coda.core.exceptions.DataLoadingException;
@@ -37,6 +38,12 @@ import java.util.Collections;
 
 @Slf4j
 public final class MongoDBExtractor implements DatabaseExtractor {
+
+
+    @Override
+    public void configureDataSource(ConnectionDetails connectionDetails) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 
     /**
      * MongoDBConnectionFactory is a custom class that

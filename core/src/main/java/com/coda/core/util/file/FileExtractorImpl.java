@@ -70,6 +70,12 @@ public final class FileExtractorImpl implements FileExtractor {
         return dataModels;
     }
 
+    /**
+     * Checks if a file exists at the given path.
+     * @param filePath The path of the file to check.
+     * @return True if the file exists, false otherwise.
+     */
+
     @Override
     public boolean exists(final String filePath) {
         return Optional.ofNullable(filePath)
@@ -79,6 +85,12 @@ public final class FileExtractorImpl implements FileExtractor {
                 .orElse(false);
     }
 
+    /**
+     * Checks if a file is readable at the given path.
+     * @param filePath The path of the file to check.
+     * @return True if the file is readable, false otherwise.
+     */
+
     @Override
     public boolean canRead(final String filePath) {
         return Optional.ofNullable(filePath)
@@ -87,6 +99,12 @@ public final class FileExtractorImpl implements FileExtractor {
                 .map(Files::isReadable)
                 .orElse(false);
     }
+
+    /**
+     * Checks if a file is writable at the given path.
+     * @param filePath The path of the file to check.
+     * @return True if the file is writable, false otherwise.
+     */
 
     @Override
     public boolean canWrite(final String filePath) {
@@ -99,6 +117,13 @@ public final class FileExtractorImpl implements FileExtractor {
                                 .map(Files::isWritable).orElse(false))
                                 .orElse(false);
     }
+
+    /**
+     * Writes data to a file using Apache Commons CSV.
+     * @param dataModels The data models to write to the file.
+     * @param filePath The path of the file to write to.
+     * @throws IOException If an I/O error occurs.
+     */
 
     @Override
     public void writeDataWithApacheCSV(
@@ -133,7 +158,7 @@ public final class FileExtractorImpl implements FileExtractor {
         }
     }
 
-    // Helper methods
+    // Private methods
     private DataModel<Object> createDataModelFromCsvRecord(
             final CSVRecord record) {
         Map<String, DataAttributes<Object>> attributes =

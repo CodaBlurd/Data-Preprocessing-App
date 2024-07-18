@@ -1,6 +1,7 @@
 package com.coda.core.service;
 
 import com.coda.core.batch.processor.DataModelProcessor;
+import com.coda.core.dtos.ConnectionDetails;
 import com.coda.core.entities.DataAttributes;
 import com.coda.core.entities.DataModel;
 import com.coda.core.exceptions.DataExtractionException;
@@ -102,10 +103,11 @@ public class DataModelService {
      * @param transformation the DataTransformation object.
      * @param processor the DataModelProcessor object.
      */
-    public DataModelService(@Qualifier("dataModelRepository") final DataModelRepository dataModels,
+    public DataModelService(@Qualifier("dataModelRepository")
+                            final DataModelRepository dataModels,
                             final DatabaseExtractorFactory dbExtractorFactory,
                             final FileExtractor fExtractor,
-                            final ResourceLoader resLoader,
+                           final ResourceLoader resLoader,
                             final MongoTemplate template,
                             final DataTransformation transformation,
                             final DataModelProcessor processor) {
@@ -119,6 +121,7 @@ public class DataModelService {
     }
 
     //== public methods ==
+
 
     //== DATA EXTRACTION PHASE ==
 
@@ -134,23 +137,27 @@ public class DataModelService {
 
     @Transactional(rollbackFor = ReadFromDbExceptions.class)
     public List<DataModel<Object>> extractDataFromTable(
+            final ConnectionDetails connectionDetails,
             final String type, final String tableName)
             throws ReadFromDbExceptions {
 
         validateArguments(type, tableName);
+        Objects.requireNonNull(connectionDetails,
+                "Connection details cannot be null");
 
         try {
             DatabaseExtractor databaseExtractor
-                    = databaseExtractorFactory.getExtractor(type.trim()
-                    .toLowerCase());
+                    = databaseExtractorFactory.getExtractor(type.trim().toLowerCase());
             Objects.requireNonNull(databaseExtractor,
                     "No suitable extractor for provided db type found");
+
+            databaseExtractor.configureDataSource(connectionDetails);
             List<DataModel<Object>> allDataModels = new ArrayList<>();
             int offSet = 0;
-            while (true) {
-                List<DataModel<Object>> dataModels = databaseExtractor
-                        .readData(tableName, BATCH_SIZE, offSet);
 
+            while (true) {
+                List<DataModel<Object>> dataModels
+                        = databaseExtractor.readData(tableName, BATCH_SIZE, offSet);
                 if (dataModels.isEmpty()) {
                     break;
                 }
@@ -158,19 +165,25 @@ public class DataModelService {
                 processAndSaveDataModels(dataModels);
                 allDataModels.addAll(dataModels);
                 offSet += BATCH_SIZE;
+
             }
 
+            log.info("Total {} data models processed from table {}",
+                    allDataModels.size(), tableName);
             return allDataModels;
 
-        } catch (IOException e) {
-            log.error("Error while reading data from database: {}, Cause: {}",
-                    e.getMessage(), "{}", e.getCause());
-            throw new ReadFromDbExceptions("Error reading from database: "
+        } catch (SQLException e) {
+            log.error("SQL error while reading data from database: {}, "
+                    + "Cause: {}", e.getMessage(), " {} ", e.getCause());
+            throw new ReadFromDbExceptions("SQL error reading from database: "
                     + e.getMessage(), ErrorType.READ_FROM_DB_EXCEPTIONS);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            log.error("Unexpected error during data extraction: {},"
+                    + " Cause: {}", e.getMessage(), " {} ", e.getCause());
+            throw new RuntimeException("Unexpected error during data extraction", e);
         }
     }
+
 
     /**
      * Reads data from a non-relational database.
@@ -444,6 +457,7 @@ public class DataModelService {
         dataModelProcessor.processAndSaveDataModels(dataModels,
                 BATCH_SIZE, dataModelRepository);
     }
+
     private void processDocumentDataModels(
             final Map<String, DataModel<Document>> dataModels)
             throws DataExtractionException, ClassNotFoundException {
@@ -461,11 +475,10 @@ public class DataModelService {
 
                     // transform value
                     dataTransformation.transformValue(type, value,
-                            typeClazzName, format, attributeName);
+                            format, attributeName);
 
                     // clean categorical values
-                    dataTransformation.cleanCategoricalValues(type, value,
-                            typeClazzName);
+                    dataTransformation.cleanCategoricalValues(type, value);
 
                     // replace missing categorical values
                     dataTransformation.replaceMissingCategoricalValues(
@@ -474,7 +487,7 @@ public class DataModelService {
                     // con vert to numberAttributes
                     List<DataAttributes<Number>> numberAttributes
                             = convertToNumberAttributes(
-                                    List.of(dataAttributes));
+                            List.of(dataAttributes));
 
                     // Remove outliers
                     dataTransformation.removeOutliers(numberAttributes);
@@ -483,9 +496,6 @@ public class DataModelService {
                     dataTransformation.replaceMissingNumericalValues(
                             List.of(dataAttributes), dataAttributes);
 
-                    // normalize data
-                    dataTransformation.normalizeData(
-                            List.of(dataAttributes), dataAttributes);
 
                     // Apply default Value
                     dataAttributes.applyDefaultValue();
@@ -499,7 +509,11 @@ public class DataModelService {
                 }
             }
         }
+        //Normalize the data.
+        List<DataModel<Document>> dataModelList = new ArrayList<>(dataModels.values());
+        dataTransformation.normalize(dataModelList);
     }
+
 
     private List<DataAttributes<Number>> convertToNumberAttributes(
             final List<DataAttributes<Document>> attributes) {

@@ -9,242 +9,263 @@ import com.coda.core.util.types.ErrorType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
 @Slf4j
 public class DataModelProcessor {
 
-    /**
-     * The DataTransformation Object.
-     */
     private final DataTransformation dataTransformation;
 
-
-
-    /**
-     * Constructor for DataModelProcessor.
-     * @param transformation the DataTransformation object.
-     */
-    public DataModelProcessor(final DataTransformation transformation) {
+    public DataModelProcessor(DataTransformation transformation) {
         this.dataTransformation = transformation;
     }
 
-    /**
-     * Process and save the data models.
-     * @param dataModels the list of data models.
-     * @param batchSize the batch size.
-     * @param dataModelRepository the data model repository.
-     * @throws DataExtractionException the data extraction exception.
-     * @throws ClassNotFoundException the class not found exception.
-     */
-
-    public void processAndSaveDataModels(
-            final List<DataModel<Object>> dataModels, final int batchSize,
-            final DataModelRepository dataModelRepository)
+    public void processAndSaveDataModels(final List<DataModel<Object>> dataModels,
+                                         final int batchSize,
+                                         final DataModelRepository dataModelRepository)
             throws DataExtractionException, ClassNotFoundException {
-
         validateDataModels(dataModels);
-        Map<String, List<DataAttributes<Object>>> categorizedAttributes
-                = categorizeAttributesByType(dataModels);
-        processAttributes(categorizedAttributes);
-        List<List<DataModel<Object>>> partitions
-                = partitionList(dataModels, batchSize);
+
+        for (DataModel<Object> dataModel : dataModels) {
+            if (dataModel.getAttributesMap() != null) {
+                for (DataAttributes<?> dataAttributes : dataModel.getAttributesMap().values()) {
+                    processDataAttributes(dataAttributes);
+                }
+            }
+        }
+
+        // Normalize the data set
+        normalizeDataSet(dataModels);
+
+        List<List<DataModel<Object>>> partitions = partitionList(dataModels, batchSize);
         for (List<DataModel<Object>> batch : partitions) {
             saveProcessedDataModels(dataModelRepository, batch);
         }
     }
 
-    /**
-     * Saves the processed data models to the repository.
-     * @param dataModelRepository the data model repository.
-     * @param dataModels the list of data models.
-     * @throws DataExtractionException the data extraction exception.
-     */
-
-    public void saveProcessedDataModels(
-            final DataModelRepository dataModelRepository,
-            final List<DataModel<Object>> dataModels)
+    public void saveProcessedDataModels(final DataModelRepository dataModelRepository,
+                                        final List<DataModel<Object>> dataModels)
             throws DataExtractionException {
-
         try {
             dataModelRepository.saveAll(dataModels);
         } catch (Exception e) {
             log.error("Error saving data models to repository", e);
-            throw new DataExtractionException("Error saving "
-                    + "data models: "
+            throw new DataExtractionException("Error saving data models: "
                     + e.getMessage(), ErrorType.DATA_SAVE_ERROR);
         }
     }
 
-    //== Private Methods ==
+    private <T> void normalizeDataSet(List<DataModel<T>> dataModels) {
+        Objects.requireNonNull(dataModels, "Data models cannot be null");
+        try {
+            dataTransformation.normalize(dataModels);
+
+            Set<String> categoricalAttributes = new HashSet<>();
+            dataModels.forEach(dataModel -> dataModel.getAttributesMap().values()
+                    .forEach(dataAttributes -> {
+                if (dataAttributes.getType().equals("java.lang.String")) {
+                    categoricalAttributes.add(dataAttributes.getAttributeName());
+                }
+            }));
+
+            dataTransformation.encodeCatVariables(dataModels, categoricalAttributes);
+        } catch (ClassNotFoundException e) {
+            log.error("Error normalizing data models: {}", e.getMessage());
+        }
+    }
+
+    private <T> void processDataAttributes(DataAttributes<T> dataAttributes)
+            throws DataExtractionException, ClassNotFoundException {
+        String type = Objects.requireNonNullElse(dataAttributes.getType(), "");
+        T value = dataAttributes.getValue();
+
+        if (isValueNullOrEmpty(value)) {
+            dataAttributes.applyDefaultValue();
+            value = dataAttributes.getValue();
+        }
+
+        String format = Objects.requireNonNullElse(dataAttributes.getFormat(), "");
+        String attributeName = Objects.requireNonNullElse(dataAttributes.getAttributeName(), "");
+
+        value = transformAndCleanValue(type, value, format, attributeName);
+        dataAttributes.setValue(value);
+
+        processAttributeByType(type, dataAttributes);
+
+        dataAttributes.applyDefaultValue();
+        validateAttribute(dataAttributes);
+        dataAttributes.setLastUpdatedDate(Instant.now());
+    }
+
+    private <T> boolean isValueNullOrEmpty(T value) {
+        return value == null || (value instanceof String && ((String) value).isEmpty());
+    }
+
+    private <T> void processAttributeByType(String type, DataAttributes<T> dataAttributes)
+            throws DataExtractionException, ClassNotFoundException {
+        if (isNumericType(type)) {
+            processNumericAttribute(List.of(dataAttributes));
+        } else if (isStringType(type)) {
+            processStringAttribute(dataAttributes);
+        } else if (isDateType(type)) {
+            processDateAttribute(dataAttributes);
+        } else if (isBooleanType(type)) {
+            processBooleanAttribute(dataAttributes);
+        } else if ("java.lang.Object".equals(type)) {
+            processObjectAttribute(dataAttributes);
+        } else {
+            throw new DataExtractionException("Unknown attribute type: "
+                    + type, ErrorType.UNKNOWN_ATTRIBUTE_TYPE);
+        }
+    }
+
+    private <T> void processBooleanAttribute(DataAttributes<T> attributes) {
+        List<DataAttributes<Boolean>> booleanAttributes = convertToBooleanAttributes(List.of(attributes));
+        if (!booleanAttributes.isEmpty()) {
+            DataAttributes<Boolean> booleanDataAttributes = booleanAttributes.get(0);
+            dataTransformation.transformValue(booleanDataAttributes.getType(),
+                    booleanDataAttributes.getValue(), booleanDataAttributes.getFormat(),
+                    booleanDataAttributes.getAttributeName());
+        }
+    }
+
+    private <T> List<DataAttributes<Boolean>> convertToBooleanAttributes(final List<DataAttributes<T>> attributes) {
+        return attributes.stream()
+                .filter(attr -> attr.getValue() instanceof Boolean)
+                .map(attr -> new DataAttributes<>(attr.getAttributeName(),
+                        attr.getValue(), attr.getType(),
+                        Boolean.class))
+                .collect(Collectors.toList());
+    }
+
+    private boolean isBooleanType(String type) {
+        return "java.lang.Boolean".equals(type) || "BOOLEAN".equals(type);
+    }
+
+    private boolean isDateType(String type) {
+        return "java.time.LocalDateTime".equals(type)
+                || "java.time.LocalDate".equals(type)
+                || "java.time.LocalTime".equals(type)
+                || "java.util.Date".equals(type)
+                || "java.sql.Date".equals(type)
+                || "java.sql.Timestamp".equals(type);
+    }
+
+    private <T> void processDateAttribute(DataAttributes<T> dataAttributes) {
+        List<DataAttributes<LocalDateTime>> dateAttributes = convertToDateAttributes(List.of(dataAttributes));
+        if (!dateAttributes.isEmpty()) {
+            DataAttributes<LocalDateTime> dateAttribute = dateAttributes.get(0);
+            dataTransformation.transformValue(dateAttribute.getType(),
+                    dateAttribute.getValue(),
+                    dateAttribute.getFormat(),
+                    dateAttribute.getAttributeName());
+        }
+    }
+
+    private <T> List<DataAttributes<LocalDateTime>> convertToDateAttributes(final List<DataAttributes<T>> attributes) {
+        return attributes.stream()
+                .filter(attr -> attr.getValue() instanceof LocalDateTime)
+                .map(attr -> new DataAttributes<>(attr.getAttributeName(),
+                        attr.getValue(), attr.getType(),
+                        LocalDateTime.class))
+                .collect(Collectors.toList());
+    }
+
+    private <T> T transformAndCleanValue(String type, T value, String format, String attributeName)
+            throws ClassNotFoundException {
+        value = dataTransformation.transformValue(type, value, format, attributeName);
+        value = dataTransformation.cleanCategoricalValues(type, value);
+        return value;
+    }
+
+    private <T> void processNumericAttribute(List<DataAttributes<T>> dataAttributes)
+            throws ClassNotFoundException {
+        List<DataAttributes<Number>> numberAttributes = convertToNumberAttributes(dataAttributes);
+        if (!numberAttributes.isEmpty()) {
+            DataAttributes<Number> numberAttribute = numberAttributes.get(0);
+            dataTransformation.removeOutliers(numberAttributes);
+            dataTransformation.replaceMissingNumericalValues(numberAttributes, numberAttribute);
+        }
+    }
+
+    private <T> void processStringAttribute(DataAttributes<T> dataAttributes) {
+        List<DataAttributes<T>> attributes = List.of(dataAttributes);
+        dataTransformation.replaceMissingCategoricalValues(attributes, dataAttributes.getType());
+    }
+
+    private boolean isNumericType(String type) {
+        return "java.lang.Integer".equals(type)
+                || "java.lang.Double".equals(type)
+                || "java.lang.Long".equals(type)
+                || "java.lang.Float".equals(type)
+                || "java.math.BigDecimal".equals(type);
+    }
+
+    private boolean isStringType(String type) {
+        return "java.lang.String".equals(type)
+                || "TEXT".equals(type)
+                || "VARCHAR".equals(type);
+    }
+
+    private <T> List<DataAttributes<Number>> convertToNumberAttributes(List<DataAttributes<T>> attributes) throws ClassNotFoundException {
+        List<DataAttributes<Number>> numberAttributes = new ArrayList<>();
+        for (DataAttributes<T> attribute : attributes) {
+            String typeClazzName = attribute.getTypeClazzName();
+            Class<?> clazz = Class.forName(typeClazzName);
+
+            if (Number.class.isAssignableFrom(clazz) && !clazz.equals(Number.class)) {
+                numberAttributes.add((DataAttributes<Number>) attribute);
+            } else {
+                log.warn("Unsupported numerical type: {}", typeClazzName);
+            }
+        }
+        return numberAttributes;
+    }
 
     private void validateDataModels(final List<DataModel<Object>> dataModels)
             throws DataExtractionException {
-
         if (dataModels == null || dataModels.isEmpty()) {
-            throw new DataExtractionException("Data models "
-                    + "list cannot be null.",
+            throw new DataExtractionException("Data models list cannot be null or empty.",
                     ErrorType.DATA_EXTRACTION_FAILED);
         }
     }
 
-    private Map<String, List<DataAttributes<Object>>>
-    categorizeAttributesByType(
-            final List<DataModel<Object>> dataModels) {
-
-        return dataModels.stream()
-                .flatMap(dataModel -> dataModel.getAttributesMap()
-                        .values().stream())
-                .collect(Collectors.groupingBy(DataAttributes::getType));
-    }
-
-    private void processAttributes(final Map<String,
-            List<DataAttributes<Object>>> categorizedAttributes)
-            throws DataExtractionException, ClassNotFoundException {
-
-        for (Map.Entry<String, List<DataAttributes<Object>>> entry
-                : categorizedAttributes.entrySet()) {
-            String attributeType = entry.getKey();
-            log.info("Processing attribute type: " + attributeType );
-            List<DataAttributes<Object>> attributes = entry.getValue();
-            attributes.forEach(attr-> log.info(attr.getValue().toString()));
-            switch (attributeType) {
-                case "java.lang.Integer",
-                        "Double", "Long",
-                        "Float",
-                        "java.math.BigDecimal"
-                        -> processNumericAttributes(attributes);
-                case "java.lang.String", "TEXT", "VARCHAR" -> processCategoricalAttributes(attributes);
-                case "Object" -> processObjectAttributes(attributes);
-
-                default ->
-                        throw new DataExtractionException("Unknown attribute"
-                                + " type: " + attributeType,
-                                ErrorType.UNKNOWN_ATTRIBUTE_TYPE);
-            }
-        }
-    }
-
-    private void processObjectAttributes(
-            final List<DataAttributes<Object>> attributes)
-            throws DataExtractionException, ClassNotFoundException {
-        Objects.requireNonNull(attributes, "Attributes cannot be null");
-
-        for (DataAttributes<Object> dataAttributes : attributes) {
-            if (dataAttributes.getValue() instanceof Number) {
-                processNumericAttributes(attributes);
-                return; // Exit the method after processing
-            } else if (dataAttributes.getValue() instanceof String) {
-                processCategoricalAttributes(attributes);
-                return; // Exit the method after processing
-            } else {
-                throw new DataExtractionException("Unknown attribute type",
-                        ErrorType.UNKNOWN_ATTRIBUTE_TYPE);
-            }
-        }
-    }
-
-
-    private void processNumericAttributes(
-            final List<DataAttributes<Object>> attributes)
-            throws DataExtractionException, ClassNotFoundException {
-
-        List<DataAttributes<BigDecimal>> numericAttributes
-                = attributes.stream()
-                .filter(attr -> attr.getValue() instanceof Number)
-                .map(attr -> new DataAttributes<>(attr.getAttributeName(),
-                        new BigDecimal(attr.getValue().toString()),
-                        attr.getType(), BigDecimal.class))
-                .collect(Collectors.toList());
-        dataTransformation.removeOutliers(numericAttributes);
-
-        for (DataAttributes<Object> dataAttributes : attributes) {
-            dataTransformation.replaceMissingNumericalValues(
-                    List.of(dataAttributes), dataAttributes);
-
-            dataTransformation.normalizeData(List.of(dataAttributes),
-                    dataAttributes);
-        }
-
-        for (DataAttributes<Object> dataAttributes : attributes) {
-            if (!(dataAttributes.getValue() instanceof Number)) {
-                validateAttributes(dataAttributes);
-            }
-        }
-    }
-
-    private void processCategoricalAttributes(
-            final List<DataAttributes<Object>> attributes)
-            throws DataExtractionException, ClassNotFoundException {
-
-        for (DataAttributes<Object> dataAttributes : attributes) {
-            String type = dataAttributes.getType();
-
-            Object value = dataAttributes.getValue();
-            String typeClazzName = dataAttributes.getTypeClazzName();
-
-            dataTransformation.cleanCategoricalValues(type, value,
-                    typeClazzName);
-        }
-
-        Map<String, List<DataAttributes<Object>>> groupedAttributes
-                = attributes.stream()
-                .collect(Collectors.groupingBy(DataAttributes::getType));
-
-        for (Map.Entry<String, List<DataAttributes<Object>>> entry
-                : groupedAttributes.entrySet()) {
-            String type = entry.getKey();
-            List<DataAttributes<Object>> groupedList
-                    = entry.getValue();
-            if (type.equals("java.lang.String") || type.equals("TEXT")
-                    || type.equals("VARCHAR")) {
-                dataTransformation
-                        .replaceMissingCategoricalValues(
-                                groupedList, type);
-            } else if (type.equals("Object")) {
-                dataTransformation
-                        .replaceMissingCategoricalValuesForObject(
-                                groupedList, type);
-
-            } else {
-                throw new DataExtractionException("Unknown attribute type",
-                        ErrorType.UNKNOWN_ATTRIBUTE_TYPE);
-            }
-        }
-
-            for (DataAttributes<Object> attribute : attributes) {
-                dataTransformation
-                        .encodeCategoricalData(List.of(attribute));
-                validateAttributes(attribute);
-            }
-        }
-
-    private void validateAttributes(
-            final DataAttributes<Object> dataAttributes)
+    private <T> void validateAttribute(final DataAttributes<T> dataAttributes)
             throws DataExtractionException {
-
-        if (dataAttributes.applyValidationRules()) {
-            throw new DataExtractionException("Validation failed "
-                    + "for attribute: " + dataAttributes.getAttributeName(),
+        if (!dataAttributes.applyValidationRules()) {
+            throw new DataExtractionException("Validation failed for attribute: "
+                    + dataAttributes.getAttributeName(),
                     ErrorType.VALIDATION_FAILED);
         }
-        dataAttributes.setLastUpdatedDate(Instant.now());
     }
 
-    private <T> List<List<T>> partitionList(
-            final List<T> list, final int size) {
+    private <T> List<List<T>> partitionList(final List<T> list, final int size) {
         List<List<T>> partitions = new ArrayList<>();
         for (int i = 0; i < list.size(); i += size) {
-            partitions.add(list.subList(i, Math.min(i + size,
-                    list.size())));
+            partitions.add(list.subList(i, Math.min(i + size, list.size())));
         }
         return partitions;
+    }
+
+    private <T> void processObjectAttribute(DataAttributes<T> dataAttributes)
+            throws ClassNotFoundException, DataExtractionException {
+        Object value = dataAttributes.getValue();
+        if (value instanceof Boolean) {
+            processBooleanAttribute((DataAttributes<Boolean>) dataAttributes);
+        } else if (value instanceof Number) {
+            processNumericAttribute(List.of(dataAttributes));
+        } else if (value instanceof String) {
+            processStringAttribute((DataAttributes<String>) dataAttributes);
+        } else if (value instanceof LocalDateTime) {
+            processDateAttribute((DataAttributes<LocalDateTime>) dataAttributes);
+        } else {
+            throw new DataExtractionException("Unsupported object type: "
+                    + value.getClass(),
+                    ErrorType.UNKNOWN_ATTRIBUTE_TYPE);
+        }
     }
 }

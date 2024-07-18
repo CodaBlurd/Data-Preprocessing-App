@@ -11,27 +11,30 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 import javax.sql.DataSource;
 
-
 @Configuration
 public class MySQLConfig {
 
     /**
-     * SQL database connection factory.
+     * The SqlDbConnectionFactory object.
      */
     private final SqlDbConnectionFactory sqlDbConnectionFactory;
 
     /**
      * Constructor to inject dependencies.
-     * @param connectionFactory the SQL database connection factory
+     *
+     * @param connectionFactory the connection factory
      */
+
     public MySQLConfig(final SqlDbConnectionFactory connectionFactory) {
         this.sqlDbConnectionFactory = connectionFactory;
     }
 
     /**
-     * MySQL data source.
-     * @return the MySQL data source
+     * Creates a DataSource object.
+     *
+     * @return DataSource object
      */
+
     @Bean(name = "dataSource")
     public DataSource mysqlDataSource() {
         DataSource dataSource = sqlDbConnectionFactory.dataSource();
@@ -42,8 +45,9 @@ public class MySQLConfig {
     }
 
     /**
-     * Default data source.
-     * @return the default data source
+     * Creates a DataSource object.
+     *
+     * @return DataSource object
      */
 
     @Bean(name = "defaultDataSource")
@@ -57,25 +61,26 @@ public class MySQLConfig {
     }
 
     /**
-     * MySQL JDBC template.
-     * @param dataSource the data source
-     * @return the MySQL JDBC template
+     * Creates a JdbcTemplate object.
+     *
+     * @param dataSource the DataSource object
+     * @return JdbcTemplate object
      */
+
     @Bean(name = "jdbcTemplate")
-    public JdbcTemplate mysqlJdbcTemplate(
-            @Qualifier("dataSource") final DataSource dataSource) {
+    public JdbcTemplate mysqlJdbcTemplate(@Qualifier("dataSource") final DataSource dataSource) {
         return new JdbcTemplate(dataSource);
     }
 
     /**
-     * MySQL transaction manager.
-     * @param dataSource the data source
-     * @return the MySQL transaction manager
+     * Creates a DataSourceTransactionManager object.
+     *
+     * @param dataSource the DataSource object
+     * @return DataSourceTransactionManager object
      */
 
     @Bean(name = "mysqlTransactionManager")
-    public DataSourceTransactionManager mysqlTransactionManager(
-            @Qualifier("dataSource") final DataSource dataSource) {
+    public DataSourceTransactionManager mysqlTransactionManager(@Qualifier("dataSource") final DataSource dataSource) {
         return new DataSourceTransactionManager(dataSource);
     }
 }

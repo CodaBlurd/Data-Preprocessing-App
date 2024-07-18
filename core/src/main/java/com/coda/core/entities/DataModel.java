@@ -46,7 +46,37 @@ public class DataModel<T> implements Serializable {
      */
     private Map<String, DataAttributes<T>> attributesMap
             = new HashMap<>();
+    // example attributes map data = { "id" : { "value" : 1, "type" : "int" } ,
+    // "Name" : { "value" : "John", "type" : "String"}, "Age" : { "value" : 25, "type" : "int"}
 
+//    Extracted data: DataModel{id=668af80ece6b434f197e58ba,
+//            attributesMap={is_active=DataAttributes[validationRulesList=[], value=false,
+//            type='java.lang.Object', attributeName='is_active', format='null', required=false,
+//            defaultValue=null, description='null', validationRules='null', parsedRules=[], metadata={},
+//            lastUpdatedDate=2024-07-07T20:18:22.479550Z, typeClazzName='java.lang.Object'],
+//        join_date=DataAttributes[validationRulesList=[], value=2031-08-31, type='java.lang.Object',
+//                attributeName='join_date', format='null', required=false, defaultValue=null,
+//                description='null', validationRules='null', parsedRules=[], metadata={}, l
+//        astUpdatedDate=2024-07-07T20:18:22.479889Z, typeClazzName='java.lang.Object'],
+//        name=DataAttributes[validationRulesList=[], value=David, type='java.lang.String',
+//                attributeName='name', format='null', required=false, defaultValue=null, description='null',
+//                validationRules='null', parsedRules=[], metadata={},
+//                lastUpdatedDate=2024-07-07T20:18:22.482255Z, typeClazzName='java.lang.String'],
+//        id=DataAttributes[validationRulesList=[], value=0, type='java.lang.Integer', attributeName='id',
+//                format='null', required=false, defaultValue=null, description='null', validationRules='null',
+//                parsedRules=[], metadata={}, lastUpdatedDate=2024-07-07T20:18:22.487821Z,
+//            typeClazzName='java.lang.Integer'], salary=DataAttributes[validationRulesList=[],
+//        value=0.0, type='java.math.BigDecimal', attributeName='salary', format='null',
+//                required=false, defaultValue=null, description='null', validationRules='null',
+//                parsedRules=[], metadata={}, lastUpdatedDate=2024-07-07T20:18:22.489799Z,
+//            typeClazzName='java.math.BigDecimal'], department=DataAttributes[validationRulesList=[],
+//        value=Engineering, type='java.lang.String', attributeName='department', format='null', required=false,
+//                defaultValue=null, description='null', validationRules='null', parsedRules=[], metadata={},
+//            lastUpdatedDate=2024-07-07T20:18:22.490120Z, typeClazzName='java.lang.String'],
+//        age=DataAttributes[validationRulesList=[], value=0, type='java.lang.Integer',
+//                attributeName='age', format='null', required=false, defaultValue=null,
+//                description='null', validationRules='null', parsedRules=[], metadata={},
+//                astUpdatedDate=2024-07-07T20:18:22.491145Z, typeClazzName='java.lang.Integer']}}
     /**
      * TimeStamp.
      */

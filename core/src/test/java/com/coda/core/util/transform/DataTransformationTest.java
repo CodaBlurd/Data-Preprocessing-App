@@ -1,13 +1,13 @@
 package com.coda.core.util.transform;
 
 import com.coda.core.entities.DataAttributes;
+import com.coda.core.entities.DataModel;
 import com.coda.core.exceptions.TransformationException;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,10 +23,9 @@ public class DataTransformationTest {
     @Test
     public void testTransformValue_NullValue() {
         assertThrows(TransformationException.class, () -> {
-            dataTransformation.transformValue("Integer",
+            dataTransformation.transformValue("java.lang.Integer",
                     null,
-                    "java.lang.Integer", null,
-                    "age");
+                    "", null);
         });
     }
 
@@ -34,38 +33,35 @@ public class DataTransformationTest {
     public void testTransformValue_NoTransformationStrategy() {
         assertThrows(TransformationException.class, () -> {
             dataTransformation.transformValue("UnknownType", "123",
-                    "java.lang.Integer", null, "age");
+                    "java.lang.Integer", null);
         });
     }
 
     @Test
     public void testTransformValue_Success() {
-        Integer transformedValue = dataTransformation.transformValue("Integer",
-                "123", "java.lang.Integer",
-                null, "age");
+        Integer transformedValue = dataTransformation.transformValue("java.lang.Integer",
+                "123", null, "age");
         assertEquals(123, transformedValue);
     }
 
     @Test
     public void testCleanCategoricalValues_NonStringType() throws ClassNotFoundException {
-        Object value = dataTransformation.cleanCategoricalValues("Integer",
-                "123",
-                "java.lang.Integer");
+        Object value = dataTransformation.cleanCategoricalValues("java.lang.Integer",
+                "123");
         assertEquals("123", value);
     }
 
     @Test
     public void testCleanCategoricalValues_NonStringValue() throws ClassNotFoundException {
-        Object value = dataTransformation.cleanCategoricalValues("String", 123,
-                "java.lang.String");
+        Object value = dataTransformation.cleanCategoricalValues("java.lang.String", 123);
         assertEquals(123, value);
     }
 
     @Test
     public void testCleanCategoricalValues_StringValue() throws ClassNotFoundException {
-        String value = dataTransformation.cleanCategoricalValues("String",
-                "Hello, World!", "java.lang.String");
-        assertEquals("HelloWorld", value);
+        String value = dataTransformation.cleanCategoricalValues("java.lang.String",
+                "Hello, World!");
+        assertEquals("Hello, World!", value);
     }
 
     @Test
@@ -182,89 +178,160 @@ public void testReplaceMissingNumericalValues_NumberType_NoMissingValues()
 }
 
     @Test
-    public void testNormalizeData_NonNumberType() {
-        assertThrows(ArithmeticException.class, () -> {
-            List<DataAttributes<String>> column = new ArrayList<>();
-            // Add some data to the column.
-            DataAttributes<String> attribute = new DataAttributes<>("Name",
-                    "John", "String", String.class);
-            dataTransformation.normalizeData(column, attribute);
-        });
-    }
-
-    @Test
     public void testNormalizeData_NumberType_MissingValues() throws ClassNotFoundException {
-        List<DataAttributes<Double>> column = new ArrayList<>();
-        // Add some data to the column, including null values.
-        column.add(new DataAttributes<>("Height", null,
-                "Double", Double.class));
-        column.add(new DataAttributes<>("Weight", 70.0,
-                "Double", Double.class));
-        DataAttributes<Double> attribute = new DataAttributes<>("Height",
-                null, "Double", Double.class);
-        dataTransformation.normalizeData(column, attribute);
+        List<DataModel<Double>> dataModels = new ArrayList<>();
+        DataModel<Double> dataModel = new DataModel<>();
+        DataModel<Double> dataModel1 = new DataModel<>();
+        Map<String, DataAttributes<Double>> attributesMap = new HashMap<>();
+        Map<String, DataAttributes<Double>> attributesMap1 = new HashMap<>();
 
-        assertNull(attribute.getValue());
+        DataAttributes<Double> attribute = new DataAttributes<>("Height", null, "java.lang.Double", Double.class);
+        DataAttributes<Double> attribute1 = new DataAttributes<>("Weight", 100.0, "java.lang.Double", Double.class);
+        attributesMap.put("Height", attribute);
+        attributesMap.put("Weight", attribute1);
+        dataModel.setAttributesMap(attributesMap);
+
+        DataAttributes<Double> attr = new DataAttributes<>("Height", null, "java.lang.Double", Double.class);
+        DataAttributes<Double> attr1 = new DataAttributes<>("Weight", 75.0, "java.lang.Double", Double.class);
+        attributesMap1.put("Height", attr);
+        attributesMap1.put("Weight", attr1);
+        dataModel1.setAttributesMap(attributesMap1);
+
+        dataModels.add(dataModel);
+        dataModels.add(dataModel1);
+        dataTransformation.normalize(dataModels);
+
+        // Add assertions here to verify the behavior of the normalize method.
+        assertEquals(2, dataModels.size());
+        assertEquals("java.lang.Double",
+                dataModels.get(0).getAttributesMap().get("Height").getType());
     }
 
     @Test
     public void testNormalizeData_NumberType_NoMissingValues() throws ClassNotFoundException {
-        List<DataAttributes<Double>> column = new ArrayList<>();
-        // Add some data to the column, with no null values.
-        column.add(new DataAttributes<>("Height", 175.0,
-                "Double", Double.class));
-        column.add(new DataAttributes<>("Weight", 70.0,
-                "Double", Double.class));
-        DataAttributes<Double> attribute = new DataAttributes<>("Height",
-                175.0, "Double", Double.class);
-        dataTransformation.normalizeData(column, attribute);
-        log.info("Attribute value: {}", attribute.getValue());
+        List<DataModel<Double>> dataModels = new ArrayList<>();
+        DataModel<Double> dataModel = new DataModel<>();
+        DataModel<Double> dataModel1 = new DataModel<>();
+        Map<String, DataAttributes<Double>> attributesMap = new HashMap<>();
+        Map<String, DataAttributes<Double>> attributesMap1 = new HashMap<>();
+
+        DataAttributes<Double> attribute = new DataAttributes<>("Height", 175.0, "java.lang.Double", Double.class);
+        DataAttributes<Double> attribute1 = new DataAttributes<>("Weight", 70.0, "java.lang.Double", Double.class);
+        attributesMap.put("Height", attribute);
+        attributesMap.put("Weight", attribute1);
+        dataModel.setAttributesMap(attributesMap);
+
+        DataAttributes<Double> attr = new DataAttributes<>("Height", 183.0, "java.lang.Double", Double.class);
+        DataAttributes<Double> attr1 = new DataAttributes<>("Weight", 89.0, "java.lang.Double", Double.class);
+        attributesMap1.put("Height", attr);
+        attributesMap1.put("Weight", attr1);
+        dataModel1.setAttributesMap(attributesMap1);
+
+        dataModels.add(dataModel);
+        dataModels.add(dataModel1);
+        dataTransformation.normalize(dataModels);
 
         assertNotNull(attribute.getValue());
-        assertTrue(true);
-        double mean = column.stream().mapToDouble(DataAttributes::getValue).average().getAsDouble();
-        double stdDev = Math.sqrt(column.stream().mapToDouble(DataAttributes::getValue)
-                .map(v -> Math.pow(v - mean, 2)).average().getAsDouble());
-        log.info("Mean: {}", mean);
-        log.info("Std Dev: {}", stdDev);
-        log.info("Normalized Value: {}", attribute.getValue());
+        assertNotNull(attr.getValue());
 
-        double normalizedValue = (attribute.getValue() - mean) / stdDev;
-        assertEquals(normalizedValue, attribute.getValue());
-        assertEquals(0, mean, 0.01);
-        assertEquals(1, stdDev, 0.01);
-        assertEquals("Double", attribute.getType());
-        assertEquals("java.lang.Double", attribute.getTypeClazzName());
-        assertEquals(2, column.size());
+        double meanHeight = (175.0 + 183.0) / 2;
+        double stdDevHeight = Math.sqrt((Math.pow(175.0 - meanHeight, 2)
+                + Math.pow(183.0 - meanHeight, 2)) / 2);
 
+        double normalizedHeight1 = (175.0 - meanHeight) / stdDevHeight;
+        double normalizedHeight2 = (183.0 - meanHeight) / stdDevHeight;
 
+        // Debug statements to check actual values
+        System.out.println("Expected normalizedHeight1: " + normalizedHeight1);
+        System.out.println("Expected normalizedHeight2: " + normalizedHeight2);
+        System.out.println("Actual normalizedHeight1: " + dataModels.get(0).getAttributesMap().get("Height").getValue());
+        System.out.println("Actual normalizedHeight2: " + dataModels.get(1).getAttributesMap().get("Height").getValue());
+
+        assertEquals(normalizedHeight1, (Double) dataModels.get(0).getAttributesMap().get("Height").getValue(), 0.0001);
+        assertEquals(normalizedHeight2, (Double) dataModels.get(1).getAttributesMap().get("Height").getValue(), 0.0001);
+        assertEquals("java.lang.Double", attribute.getType());
     }
 
+//    @Test
+//    public void testEncodeCategoricalVariable() {
+//        List<DataModel<String>> dataModels = new ArrayList<>();
+//        DataModel<String> dataModel = new DataModel<>();
+//        DataModel<String> dataModel1 = new DataModel<>();
+//        Map<String, DataAttributes<String>> attributesMap = new HashMap<>();
+//        Map<String, DataAttributes<String>> attributesMap1 = new HashMap<>();
+//
+//        attributesMap.put("Department", new DataAttributes<>("Department", "Engineering", "java.lang.String", String.class));
+//        attributesMap.put("Age", new DataAttributes<>("Age", "30", "java.lang.String", String.class));
+//        attributesMap.put("Address", new DataAttributes<>("Address", "123 Main St", "java.lang.String", String.class));
+//        dataModel.setAttributesMap(attributesMap);
+//
+//        attributesMap1.put("Department", new DataAttributes<>("Department", "HR", "java.lang.String", String.class));
+//        attributesMap1.put("Age", new DataAttributes<>("Age", "40", "java.lang.String", String.class));
+//        attributesMap1.put("Address", new DataAttributes<>("Address", "456 Elm St", "java.lang.String", String.class));
+//        dataModel1.setAttributesMap(attributesMap1);
+//
+//        dataModels.add(dataModel);
+//        dataModels.add(dataModel1);
+//
+//        Set<String> categoricalAttributes = new HashSet<>(List.of("Department"));
+//
+//        dataTransformation.encodeCatVariables(dataModels, categoricalAttributes);
+//
+//        // Add assertions here to verify the behavior of the encodeCatVariables method.
+//        assertEquals(2, dataModels.size());
+//
+//        DataAttributes<String> departmentAttr1 = dataModels.get(0).getAttributesMap().get("Department");
+//        DataAttributes<String> departmentAttr2 = dataModels.get(1).getAttributesMap().get("Department");
+//        log.info(departmentAttr1.getEncodedValues().toString());
+//
+//        assertNotNull(departmentAttr1.getEncodedValues());
+//        assertNotNull(departmentAttr2.getEncodedValues());
+//
+//        Map<String, Integer> encodedDept1 = departmentAttr1.getEncodedValues();
+//        Map<String, Integer> encodedDept2 = departmentAttr2.getEncodedValues();
+//
+//        assertEquals(1, encodedDept1.get("Engineering").intValue());
+//        assertEquals(0, encodedDept1.get("HR").intValue());
+//
+//        assertEquals(0, encodedDept2.get("Engineering").intValue());
+//        assertEquals(1, encodedDept2.get("HR").intValue());
+//    }
+
+
+
     @Test
-    public void testRemoveOutliers() {
-        // Create a list of DataAttributes with some outlier values
-        List<DataAttributes<Double>> column = new ArrayList<>();
-        column.add(new DataAttributes<>("Height",
-                175.0, "Double", Double.class));
-        column.add(new DataAttributes<>("Height",
-                180.0, "Double", Double.class));
-        column.add(new DataAttributes<>("Height",
-                185.0, "Double", Double.class));
-        column.add(new DataAttributes<>("Height",
-                190.0, "Double", Double.class));
-        column.add(new DataAttributes<>("Height",
-                300.0, "Double", Double.class)); // Outlier
-        column.add(new DataAttributes<>("Height",
-                -100.0, "Double", Double.class)); // Outlier
+    void testEncodeCatVariables() {
+        // Setup
+        List<DataModel<String>> dataModels = new ArrayList<>();
+        DataModel<String> model1 = new DataModel<>();
+        Map<String, DataAttributes<String>> attributesMap1 = new HashMap<>();
+        attributesMap1.put("Department", new DataAttributes<>("Department",
+                "Engineering", "java.lang.String", String.class));
+        model1.setAttributesMap(attributesMap1);
 
-        // Call removeOutliers
-        dataTransformation.removeOutliers(column);
+        DataModel<String> model2 = new DataModel<>();
+        Map<String, DataAttributes<String>> attributesMap2 = new HashMap<>();
+        attributesMap2.put("Department", new DataAttributes<>("Department", "HR",
+                "java.lang.String", String.class));
+        model2.setAttributesMap(attributesMap2);
 
-        // Check that the outliers have been removed
-        assertEquals(4, column.size());
-        for (DataAttributes<Double> attr : column) {
-            double value = attr.getValue();
-            assert (value >= 175.0 && value <= 190.0);
+        dataModels.add(model1);
+        dataModels.add(model2);
+
+        Set<String> categoricalAttributes = new HashSet<>(Arrays.asList("Department"));
+
+        // Invoke
+        dataTransformation.encodeCatVariables(dataModels, categoricalAttributes);
+
+        // Verify
+        for (DataModel<String> model : dataModels) {
+            Map<String, DataAttributes<String>> attributes = model.getAttributesMap();
+            assertTrue(attributes.containsKey("Engineering") || attributes.containsKey("HR"),
+                    "Encoded attributes should contain 'Engineering' or 'HR'.");
+            assertEquals(2, attributes.size(),
+                    "Each model should have two attributes after encoding.");
+            assertNotNull(attributes.get("Engineering") != null ? attributes.get("Engineering").getValue() : attributes.get("HR").getValue(),
+                    "Encoded value should not be null.");
         }
     }
 

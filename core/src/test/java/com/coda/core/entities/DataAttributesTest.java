@@ -77,12 +77,12 @@ class DataAttributesTest {
                 = new DataAttributes<>("testString", "validString",
                 "String", String.class);
         stringDataAttributes.setValidationRules("non-empty");
-        stringDataAttributes.setRequired(true);
+        stringDataAttributes.setRequired(false);
         stringDataAttributes.initializeValidationRules();
 
         log.info("Validation rules (non-empty, validString): {}",
                 stringDataAttributes.getValidationRulesList());
-        assertFalse(stringDataAttributes.applyValidationRules(),
+        assertTrue(stringDataAttributes.applyValidationRules(),
                 "Validation should pass for non-empty string");
 
         stringDataAttributes.setValue("");
@@ -102,13 +102,13 @@ class DataAttributesTest {
 
         log.info("Validation rules (non-negative, 10): {}",
                 integerAttributes.getValidationRulesList());
-        assertFalse(integerAttributes.applyValidationRules(),
+        assertTrue(integerAttributes.applyValidationRules(),
                 "Validation should pass for non-negative integer");
 
         integerAttributes.setValue(-1);
        log.info("Validation rules (non-negative, -1): {}",
                integerAttributes.getValidationRulesList());
-        assertTrue(integerAttributes.applyValidationRules(),
+        assertFalse(integerAttributes.applyValidationRules(),
                 "Validation should fail for negative integer");
     }
 

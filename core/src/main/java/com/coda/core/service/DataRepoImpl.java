@@ -12,7 +12,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
-public class RepoTestImpl implements DataModelRepository {
+public class DataRepoImpl implements DataModelRepository {
+
     @Override
     public <S extends DataModel<?>> S insert(S entity) {
         return null;
@@ -20,51 +21,36 @@ public class RepoTestImpl implements DataModelRepository {
 
     @Override
     public <S extends DataModel<?>> List<S> insert(Iterable<S> entities) {
-        return null;
-    }
-
-    @Override
-    public <S extends DataModel<?>> Optional<S> findOne(Example<S> example) {
-        return Optional.empty();
+        return List.of();
     }
 
     @Override
     public <S extends DataModel<?>> List<S> findAll(Example<S> example) {
-        return null;
+        return List.of();
     }
 
     @Override
     public <S extends DataModel<?>> List<S> findAll(Example<S> example, Sort sort) {
-        return null;
-    }
-
-    @Override
-    public <S extends DataModel<?>> Page<S> findAll(Example<S> example, Pageable pageable) {
-        return null;
-    }
-
-    @Override
-    public <S extends DataModel<?>> long count(Example<S> example) {
-        return 0;
-    }
-
-    @Override
-    public <S extends DataModel<?>> boolean exists(Example<S> example) {
-        return false;
-    }
-
-    @Override
-    public <S extends DataModel<?>, R> R findBy(Example<S> example, Function<FluentQuery.FetchableFluentQuery<S>, R> queryFunction) {
-        return null;
-    }
-
-    @Override
-    public <S extends DataModel<?>> S save(S entity) {
-        return null;
+        return List.of();
     }
 
     @Override
     public <S extends DataModel<?>> List<S> saveAll(Iterable<S> entities) {
+        return List.of();
+    }
+
+    @Override
+    public List<DataModel<?>> findAll() {
+        return List.of();
+    }
+
+    @Override
+    public List<DataModel<?>> findAllById(Iterable<String> strings) {
+        return List.of();
+    }
+
+    @Override
+    public <S extends DataModel<?>> S save(S entity) {
         return null;
     }
 
@@ -76,16 +62,6 @@ public class RepoTestImpl implements DataModelRepository {
     @Override
     public boolean existsById(String s) {
         return false;
-    }
-
-    @Override
-    public List<DataModel<?>> findAll() {
-        return null;
-    }
-
-    @Override
-    public List<DataModel<?>> findAllById(Iterable<String> strings) {
-        return null;
     }
 
     @Override
@@ -120,11 +96,36 @@ public class RepoTestImpl implements DataModelRepository {
 
     @Override
     public List<DataModel<?>> findAll(Sort sort) {
-        return null;
+        return List.of();
     }
 
     @Override
     public Page<DataModel<?>> findAll(Pageable pageable) {
+        return null;
+    }
+
+    @Override
+    public <S extends DataModel<?>> Optional<S> findOne(Example<S> example) {
+        return Optional.empty();
+    }
+
+    @Override
+    public <S extends DataModel<?>> Page<S> findAll(Example<S> example, Pageable pageable) {
+        return null;
+    }
+
+    @Override
+    public <S extends DataModel<?>> long count(Example<S> example) {
+        return 0;
+    }
+
+    @Override
+    public <S extends DataModel<?>> boolean exists(Example<S> example) {
+        return false;
+    }
+
+    @Override
+    public <S extends DataModel<?>, R> R findBy(Example<S> example, Function<FluentQuery.FetchableFluentQuery<S>, R> queryFunction) {
         return null;
     }
 }
